@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 使用者個人檔案同步 (/users/{userId})
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 協作清單權限控管 (/lists/{listId})
+    match /lists/{listId} {
+      // 判斷是否為公開協作，或是協作成員、或擁有者
+      function isMember() {
+        return request.auth != null && (
+          resource.data.isPublic == true ||
+          resource.data.ownerId == request.auth.uid ||
+          (resource.data.members != null && request.auth.uid in resource.data.members) ||
+          (resource.data.memberEmails != null && request.auth.token.email in resource.data.memberEmails)
+        );
+      }
+
+      allow read: if request.auth != null && (
+        resource.data.isPublic == true ||
+        resource.data.ownerId == request.auth.uid ||
+        (resource.data.members != null && request.auth.uid in resource.data.members) ||
+        (resource.data.memberEmails != null && request.auth.token.email in resource.data.memberEmails) ||
+        // 允許透過 6 碼邀請碼查詢清單以加入
+        resource.data.inviteCode != null
+      );
+
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+
+      // 清單內待辦事項 (/lists/{listId}/tasks/{taskId})
+      match /tasks/{taskId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+  }
+}
