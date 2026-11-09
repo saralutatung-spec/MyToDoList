@@ -1,0 +1,519 @@
+<!-- ... existing code ... -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>花精靈塔羅牌 | Flower Fairy Tarot</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        fairyPink: {
+                            50: '#FFF5F7',
+                            100: '#FFE4EA',
+                            200: '#FFCCD7',
+                            400: '#FF7B9A',
+                            600: '#E63963',
+                        },
+                        roseGold: '#D48C95',
+                        mysticPurple: '#6D597A',
+                        fairyGreen: '#E2ECE9',
+                    },
+                    fontFamily: {
+                        serif: ['"Noto Serif TC"', '"Cinzel"', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background: radial-gradient(circle at 50% 20%, #FFF5F7 0%, #FCE8EE 40%, #E8D5DD 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Floating Rose Petals Animation */
+        .petal {
+            position: absolute;
+            background: linear-gradient(135deg, #ffb6c1, #ff69b4);
+            border-radius: 15px 0 15px 0;
+            opacity: 0.6;
+            pointer-events: none;
+            animation: animatePetal 10s linear infinite;
+        }
+
+        @keyframes animatePetal {
+            0% {
+                transform: translateY(-10vh) rotate(0deg) scale(0.8);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(105vh) rotate(720deg) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        /* Custom Rose Button Styles */
+        .btn-rose {
+            background: linear-gradient(135deg, #FFF0F3 0%, #FFCCD7 50%, #F4A261 100%);
+            border: 2px solid #E6A4B4;
+            color: #6B2D5C;
+            box-shadow: 0 4px 15px rgba(230, 57, 99, 0.15), inset 0 0 8px rgba(255, 255, 255, 0.8);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-rose:hover {
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 8px 25px rgba(230, 57, 99, 0.3), inset 0 0 12px rgba(255, 255, 255, 0.9);
+            border-color: #E63963;
+            color: #8B0032;
+        }
+
+        .btn-rose-active {
+            background: linear-gradient(135deg, #E63963 0%, #C82D54 50%, #8B0032 100%) !important;
+            border-color: #FFCCD7 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 6px 20px rgba(230, 57, 99, 0.4), inset 0 0 10px rgba(255, 204, 215, 0.5) !important;
+        }
+
+        /* 3D Card Flip styles */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1rem;
+            box-shadow: 0 8px 20px -4px rgba(109, 89, 122, 0.2);
+        }
+
+        .card-back {
+            background-size: cover;
+            background-position: center;
+            border: 3px solid #FFF0F3;
+        }
+
+        .card-front {
+            transform: rotateY(180deg);
+            background: rgba(255, 253, 250, 0.97);
+            border: 2px solid #F5C6D0;
+        }
+
+        @keyframes subtleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .animate-float {
+            animation: subtleFloat 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="text-stone-800 flex flex-col justify-between min-h-screen">
+
+    <!-- Petals Container -->
+    <div id="petals-container"></div>
+
+    <!-- Header Section -->
+    <header class="text-center pt-4 pb-2 px-4 relative z-10">
+        <div class="inline-flex items-center gap-1.5 bg-white/60 backdrop-blur-md border border-pink-200 px-4 py-1 rounded-full mb-2 shadow-sm">
+            <span class="text-rose-600 text-[11px] tracking-widest font-semibold uppercase">🌹 Flower Fairy Tarot 🌹</span>
+        </div>
+        <h1 class="text-2xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-800 via-pink-600 to-purple-800 tracking-wide mb-1 drop-shadow-sm font-serif">
+            🌸 花精靈塔羅牌 🌸
+        </h1>
+        <p class="text-purple-900/80 text-xs sm:text-sm max-w-lg mx-auto leading-relaxed">
+            進入花仙子的秘密花園，聽聆玫瑰與百合的溫柔祝福，開啟屬於你的靈魂占卜。
+        </p>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-6xl mx-auto px-2 py-2 w-full flex-grow flex flex-col justify-center relative z-10">
+
+        <!-- Rose Spread Selection Buttons -->
+        <div class="flex flex-wrap justify-center gap-2 sm:gap-3 mb-4">
+            <button onclick="selectSpread('single')" id="btn-single" class="btn-rose spread-btn px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5">
+                <span class="text-sm">🌹</span> 玫瑰單牌指引
+            </button>
+            <button onclick="selectSpread('three')" id="btn-three" class="btn-rose btn-rose-active spread-btn px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5">
+                <span class="text-sm">🌸</span> 三花盛開陣（過去・現在・未來）
+            </button>
+            <button onclick="selectSpread('all')" id="btn-all" class="btn-rose spread-btn px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5">
+                <span class="text-sm">💐</span> 五精靈全牌祝福
+            </button>
+        </div>
+
+        <!-- Action Rose Controls -->
+        <div class="flex justify-center items-center gap-3 mb-4">
+            <button onclick="shuffleAndReset()" class="btn-rose px-6 py-2 rounded-full font-bold text-xs flex items-center gap-2 shadow-md group">
+                <i class="fa-solid fa-seedling text-rose-600 group-hover:rotate-45 transition-transform duration-500"></i>
+                <span>玫瑰洗牌．重新抽牌</span>
+                <span class="text-[10px] opacity-75">✨</span>
+            </button>
+        </div>
+
+        <!-- Tarot Cards Display Area -->
+        <div id="cards-container" class="flex flex-wrap justify-center items-center gap-3 sm:gap-4 my-2 min-h-[280px]">
+            <!-- Dynamic cards rendered here -->
+        </div>
+
+        <!-- Spread Instruction Hint -->
+        <div id="hint-text" class="text-center text-rose-800/70 text-xs mt-1 mb-3 italic font-serif">
+            🌸 輕觸花語塔羅牌，揭開花精靈帶給你的訊息 🌸
+        </div>
+
+        <!-- Detailed Reading Section -->
+        <div id="reading-section" class="mt-6 bg-white/70 backdrop-blur-md border border-pink-200/80 rounded-3xl p-6 sm:p-8 shadow-2xl transition-all duration-500 hidden">
+            <div class="flex items-center justify-between border-b border-pink-100 pb-4 mb-6">
+                <h2 class="text-xl sm:text-2xl font-bold text-rose-950 flex items-center gap-2">
+                    <span class="text-2xl">🌹</span> 花精靈靈魂解讀
+                </h2>
+                <span id="reading-summary-tag" class="bg-rose-100 text-rose-800 border border-rose-200 text-xs px-4 py-1.5 rounded-full font-bold">
+                    三花盛開陣解析
+                </span>
+            </div>
+
+            <div id="reading-details" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Dynamic Card Meanings -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-6 text-rose-900/60 text-xs relative z-10">
+        <p>© 2026 花精靈塔羅牌 Flower Fairy Tarot | 玫瑰花香・陪伴心靈</p>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        const CARD_BACK_URL = 'https://duk.tw/LflUHe.jpg';
+
+        // Spawn falling rose petals
+        function createPetals() {
+            const container = document.getElementById('petals-container');
+            for (let i = 0; i < 15; i++) {
+                const petal = document.createElement('div');
+                petal.className = 'petal';
+                petal.style.left = Math.random() * 100 + 'vw';
+                petal.style.width = (Math.random() * 12 + 8) + 'px';
+                petal.style.height = (Math.random() * 16 + 10) + 'px';
+                petal.style.animationDuration = (Math.random() * 6 + 6) + 's';
+                petal.style.animationDelay = (Math.random() * 5) + 's';
+                container.appendChild(petal);
+            }
+        }
+        createPetals();
+
+        // Tarot Cards Data with Flower Fairy Themes
+        const TAROT_CARDS = [
+            {
+                id: 'sun',
+                name: '太陽 (向日葵精靈)',
+                englishName: 'The Sun',
+                numeral: 'XIX',
+                fairyFlower: '向日葵花精靈',
+                keywords: ['光明耀眼', '蓬勃生命力', '熱情成功', '快樂暖陽'],
+                svgColor: { bg: '#FFFBEB', primary: '#F59E0B', secondary: '#FDE047' },
+                summary: '向日葵精靈帶來溫暖的陽光與無盡活力。驅散陰霾，點亮希望，預示著充滿自信與圓滿的時刻。',
+                love: '情感如夏季陽光般熱烈坦誠，充滿歡聲笑語與真摯關懷。',
+                career: '事業迎來榮耀與大展身手的機會，能力得到充分顯露。',
+                svgIcon: `
+                    <circle cx="100" cy="110" r="45" fill="#FDE047" stroke="#F59E0B" stroke-width="4"/>
+                    <path d="M100 45 L100 25 M100 175 L100 195 M35 110 L15 110 M185 110 L165 110 M54 64 L40 50 M160 170 L146 156 M54 156 L40 170 M160 50 L146 64" stroke="#F59E0B" stroke-width="5" stroke-linecap="round"/>
+                    <circle cx="85" cy="105" r="5" fill="#B45309"/>
+                    <circle cx="115" cy="105" r="5" fill="#B45309"/>
+                    <path d="M88 122 Q100 135 112 122" fill="none" stroke="#B45309" stroke-width="4" stroke-linecap="round"/>
+                `
+            },
+            {
+                id: 'lovers',
+                name: '戀人 (粉玫瑰精靈)',
+                englishName: 'The Lovers',
+                numeral: 'VI',
+                fairyFlower: '粉紅玫瑰精靈',
+                keywords: ['甜蜜芬芳', '和諧心繫', '靈魂契合', '美好選擇'],
+                svgColor: { bg: '#FFF0F3', primary: '#E63963', secondary: '#FFCCD7' },
+                summary: '粉玫瑰精靈為你帶來浪漫與真愛的花語。象徵著心靈相通的連結與相互包容的美好夥伴關係。',
+                love: '戀情浪漫甜蜜，單身者有機會邂逅心動對象，戀人情感更臻濃密。',
+                career: '與合作夥伴建立起極佳默契，選擇符合內心真愛的事業方向。',
+                svgIcon: `
+                    <path d="M100 145 C70 100 40 120 60 150 C80 180 100 195 100 195 C100 195 120 180 140 150 C160 120 130 100 100 145 Z" fill="#FFCCD7" stroke="#E63963" stroke-width="3"/>
+                    <circle cx="75" cy="85" r="18" fill="#FFF0F3" stroke="#E63963" stroke-width="3"/>
+                    <circle cx="125" cy="85" r="18" fill="#FFF0F3" stroke="#E63963" stroke-width="3"/>
+                    <path d="M60 70 C75 50 125 50 140 70" fill="none" stroke="#F4A261" stroke-width="3" stroke-dasharray="4 4"/>
+                `
+            },
+            {
+                id: 'star',
+                name: '星星 (水仙花精靈)',
+                englishName: 'The Star',
+                numeral: 'XVII',
+                fairyFlower: '水仙與睡蓮精靈',
+                keywords: ['寧靜療癒', '希望之光', '心靈滋養', '純潔直覺'],
+                svgColor: { bg: '#F0F9FF', primary: '#0284C7', secondary: '#BAE6FD' },
+                summary: '夜空中閃耀的花精靈靈光，帶來療癒心靈的純淨清泉，讓你重拾信心與內心的寧靜。',
+                love: '感情寧靜溫柔，彼此充滿信任與精神寄託，帶來溫暖安慰。',
+                career: '靈感與創意源源不絕，適合追求夢想與沉澱充實自我。',
+                svgIcon: `
+                    <polygon points="100,45 112,80 148,80 119,102 130,138 100,116 70,138 81,102 52,80 88,80" fill="#BAE6FD" stroke="#0284C7" stroke-width="3"/>
+                    <path d="M70 160 Q85 140 100 170 T130 160 T160 180" fill="none" stroke="#38BDF8" stroke-width="4" stroke-linecap="round"/>
+                `
+            },
+            {
+                id: 'knight',
+                name: '聖杯騎士 (藍風鈴精靈)',
+                englishName: 'Knight of Cups',
+                numeral: 'Knight',
+                fairyFlower: '藍風鈴精靈',
+                keywords: ['詩意邀約', '深情優雅', '追求理想', '溫柔守護'],
+                svgColor: { bg: '#F5F3FF', primary: '#6366F1', secondary: '#C7D2FE' },
+                summary: '騎著駿馬穿梭花叢的藍風鈴騎士，手持充滿情感的聖杯，傳遞溫柔與藝術感的喜訊。',
+                love: '收到令人動心的浪漫告白或驚喜邀約，感情世界充滿詩意。',
+                career: '憑藉良好的人際和諧與優雅態度獲取賞識，拓展理想。',
+                svgIcon: `
+                    <path d="M80 80 L120 80 L115 120 C115 135 108 140 100 140 C92 140 85 135 85 120 Z" fill="#FBBF24" stroke="#D97706" stroke-width="3"/>
+                    <path d="M100 140 L100 165 M85 165 L115 165" stroke="#D97706" stroke-width="4" stroke-linecap="round"/>
+                    <path d="M60 100 Q40 80 50 120 Q70 110 80 100" fill="#818CF8" opacity="0.7"/>
+                `
+            },
+            {
+                id: 'emperor',
+                name: '皇帝 (牡丹花精靈)',
+                englishName: 'The Emperor',
+                numeral: 'IV',
+                fairyFlower: '國色牡丹精靈',
+                keywords: ['穩健護航', '權威秩序', '堅定基石', '責任與榮耀'],
+                svgColor: { bg: '#FFF1F2', primary: '#E11D48', secondary: '#FECDD3' },
+                summary: '牡丹花精靈展現雍容華貴的王權氣度，為你建立穩固的庇護所，帶來條理與強大依靠。',
+                love: '給予安定可靠的承諾，感情關係堅實且充滿安全感。',
+                career: '建立結構與明確目標，發揮領導才能，掌控全局走向成功。',
+                svgIcon: `
+                    <polygon points="75,80 85,55 100,70 115,55 125,80" fill="#FBBF24" stroke="#B45309" stroke-width="3"/>
+                    <rect x="70" y="85" width="60" height="70" rx="6" fill="#FECDD3" stroke="#E11D48" stroke-width="3"/>
+                `
+            }
+        ];
+
+        // ... existing code ...
+        let currentSpread = 'three';
+        let currentDeck = [];
+        let revealedCardState = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            selectSpread('three');
+        });
+
+        function selectSpread(mode) {
+            currentSpread = mode;
+            
+            document.querySelectorAll('.spread-btn').forEach(btn => {
+                btn.classList.remove('btn-rose-active');
+            });
+            const activeBtn = document.getElementById(`btn-${mode}`);
+            if (activeBtn) {
+                activeBtn.classList.add('btn-rose-active');
+            }
+
+            document.getElementById('reading-section').classList.add('hidden');
+            shuffleAndReset();
+        }
+
+        function shuffleAndReset() {
+            document.getElementById('reading-section').classList.add('hidden');
+            let shuffled = [...TAROT_CARDS].sort(() => Math.random() - 0.5);
+
+            let count = 3;
+            if (currentSpread === 'single') count = 1;
+            if (currentSpread === 'all') count = 5;
+
+            currentDeck = shuffled.slice(0, count);
+            revealedCardState = new Array(count).fill(false);
+
+            renderCards();
+        }
+
+        function renderCards() {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            const spreadTitles = {
+                'single': ['🌹 今日花語指引'],
+                'three': ['🌸 過去 (Past)', '🌸 現在 (Present)', '🌸 未來 (Future)'],
+                'all': ['向日葵 (光明)', '粉玫瑰 (情感)', '水仙 (希望)', '藍風鈴 (機會)', '牡丹 (強大)']
+            };
+
+            // Dynamic width per card count to prevent oversized cards
+            let cardDimensionClass = "w-32 h-52 sm:w-36 sm:h-60"; // 5 cards size
+            if (currentSpread === 'single') cardDimensionClass = "w-44 h-72 sm:w-48 sm:h-80";
+            if (currentSpread === 'three') cardDimensionClass = "w-36 h-60 sm:w-40 sm:h-68";
+
+            currentDeck.forEach((card, index) => {
+                const cardSlot = document.createElement('div');
+                cardSlot.className = 'flex flex-col items-center animate-float';
+                cardSlot.style.animationDelay = `${index * 0.2}s`;
+
+                let positionLabel = (currentSpread === 'three') 
+                    ? spreadTitles['three'][index] 
+                    : ((currentSpread === 'single') ? spreadTitles['single'][0] : `花語 ${index + 1}`);
+
+                cardSlot.innerHTML = `
+                    <div class="text-[10px] font-bold text-rose-900 mb-1.5 tracking-wider bg-white/80 px-2.5 py-0.5 rounded-full border border-pink-200 shadow-xs flex items-center gap-1">
+                        ${positionLabel}
+                    </div>
+                    <div class="${cardDimensionClass} perspective-1000 cursor-pointer group" onclick="revealCard(${index})">
+                        <div id="card-inner-${index}" class="card-inner">
+                            <!-- Card Back -->
+                            <div class="card-back overflow-hidden relative flex flex-col justify-between p-2 rounded-xl shadow-lg border-2 border-white" style="background-image: url('${CARD_BACK_URL}');">
+                                <div class="absolute inset-0 bg-rose-950/10 group-hover:bg-transparent transition-colors"></div>
+                                <div class="relative z-10 w-full h-full border border-white/50 rounded-lg flex flex-col justify-between p-1.5 pointer-events-none">
+                                    <div class="text-white text-[9px] tracking-widest text-center font-serif opacity-90">🌸 Flower Fairy 🌸</div>
+                                    <div class="text-center text-white drop-shadow-sm">
+                                        <span class="text-lg sm:text-xl animate-pulse">🌹</span>
+                                    </div>
+                                    <div class="text-white text-[9px] tracking-widest text-center font-serif opacity-90">✦ Tarot ✦</div>
+                                </div>
+                            </div>
+
+                            <!-- Card Front -->
+                            <div class="card-front rounded-xl p-2.5 flex flex-col justify-between text-center overflow-hidden" style="background: linear-gradient(180deg, ${card.svgColor.bg} 0%, #FFFFFF 100%);">
+                                <div class="flex justify-between items-center text-rose-900/60 font-serif text-[10px] font-bold border-b border-pink-100 pb-0.5">
+                                    <span>${card.numeral}</span>
+                                    <span class="truncate max-w-[75px]">${card.englishName}</span>
+                                </div>
+                                
+                                <div class="my-auto py-1 flex justify-center items-center">
+                                    <svg viewBox="0 0 200 220" class="w-20 h-20 sm:w-24 sm:h-24 drop-shadow-sm">
+                                        ${card.svgIcon}
+                                    </svg>
+                                </div>
+
+                                <div>
+                                    <div class="text-[9px] text-rose-600 font-bold mb-0.5">${card.fairyFlower}</div>
+                                    <h3 class="text-xs sm:text-sm font-bold text-stone-800 tracking-wide">${card.name}</h3>
+                                    <div class="flex flex-wrap justify-center gap-0.5 mt-1">
+                                        ${card.keywords.slice(0, 2).map(kw => `<span class="text-[9px] bg-rose-100/80 text-rose-800 px-1.5 py-0.2 rounded-full border border-rose-200">${kw}</span>`).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(cardSlot);
+            });
+        }
+
+        function revealCard(index) {
+            const cardInner = document.getElementById(`card-inner-${index}`);
+            if (!cardInner) return;
+
+            if (!revealedCardState[index]) {
+                cardInner.classList.add('flipped');
+                revealedCardState[index] = true;
+            }
+
+            if (revealedCardState.every(state => state === true)) {
+                setTimeout(() => {
+                    showReadingResults();
+                }, 600);
+            }
+        }
+
+        function showReadingResults() {
+            const readingSection = document.getElementById('reading-section');
+            const readingDetails = document.getElementById('reading-details');
+            const summaryTag = document.getElementById('reading-summary-tag');
+
+            const tagMap = {
+                'single': '🌹 玫瑰單牌指引',
+                'three': '🌸 三花盛開陣解析',
+                'all': '💐 五精靈全牌解析'
+            };
+            summaryTag.innerText = tagMap[currentSpread] || '花精靈解讀';
+
+            if (currentSpread === 'single') {
+                readingDetails.className = 'grid grid-cols-1 max-w-xl mx-auto gap-6';
+            } else if (currentSpread === 'three') {
+                readingDetails.className = 'grid grid-cols-1 md:grid-cols-3 gap-6';
+            } else {
+                readingDetails.className = 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4';
+            }
+
+            const positionTitles = {
+                'single': ['今日花語指引'],
+                'three': ['過去花根 (Past)', '現狀綻放 (Present)', '結實未來 (Future)'],
+                'all': ['向日葵精靈', '粉玫瑰精靈', '水仙精靈', '藍風鈴精靈', '牡丹精靈']
+            };
+
+            readingDetails.innerHTML = currentDeck.map((card, idx) => `
+                <div class="bg-white/90 rounded-2xl p-5 border border-pink-200/80 shadow-md flex flex-col justify-between hover:shadow-lg transition-all">
+                    <div>
+                        <div class="text-xs font-bold text-rose-800 bg-rose-100/70 border border-rose-200 px-3 py-1 rounded-full inline-block mb-2">
+                            ${positionTitles[currentSpread][idx] || `位置 ${idx+1}`}
+                        </div>
+                        <h4 class="text-lg font-bold text-stone-800 flex items-center justify-between">
+                            <span>${card.name}</span>
+                            <span class="text-xs font-serif text-rose-400">${card.numeral}</span>
+                        </h4>
+                        <div class="text-xs text-rose-600 font-semibold mt-0.5">${card.fairyFlower}</div>
+                        
+                        <div class="flex flex-wrap gap-1 my-2.5">
+                            ${card.keywords.map(k => `<span class="text-[10px] bg-pink-50 text-rose-700 px-2 py-0.5 rounded-full border border-pink-100">#${k}</span>`).join('')}
+                        </div>
+                        
+                        <p class="text-xs text-stone-600 leading-relaxed mt-3 border-t border-pink-100 pt-3">
+                            ${card.summary}
+                        </p>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-pink-100 text-[11px] text-stone-600 space-y-2">
+                        <div class="flex items-start gap-1.5">
+                            <span class="text-rose-500">🌸</span>
+                            <span><strong>愛情花語：</strong>${card.love}</span>
+                        </div>
+                        <div class="flex items-start gap-1.5">
+                            <span class="text-amber-500">🌿</span>
+                            <span><strong>事業花語：</strong>${card.career}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            readingSection.classList.remove('hidden');
+            readingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    </script>
+</body>
+</html>

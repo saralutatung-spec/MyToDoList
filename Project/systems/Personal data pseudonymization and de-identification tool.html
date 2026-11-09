@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個資假名化工具 - 本地端去識別化與數據關聯保留系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- SheetJS for Excel / CSV Parsing & Exporting -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom CSS Styles -->
+    <style>
+        .step-inactive { opacity: 0.5; pointer-events: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.7); }
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 font-sans flex flex-col transition-colors duration-200">
+
+    <!-- Top Local Security Banner -->
+    <div class="bg-emerald-600 text-white px-4 py-2 flex items-center justify-between text-xs sm:text-sm shadow-md">
+        <div class="flex items-center space-x-2 container mx-auto">
+            <i data-lucide="shield-check" class="w-5 h-5 flex-shrink-0"></i>
+            <span><strong>100% 本地端安全保證：</strong> 所有檔案解析、資料演算與假名化處理均在您的瀏覽器內部完成，資料絕不上傳至任何外部伺服器。</span>
+        </div>
+        <button onclick="toggleDarkMode()" class="p-1 hover:bg-emerald-700 rounded transition text-white flex items-center gap-1 text-xs" title="切換深色/淺色模式">
+            <i data-lucide="moon" id="theme-icon" class="w-4 h-4"></i>
+        </button>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 py-6 flex-1 flex flex-col max-w-7xl space-y-6">
+        
+        <!-- Header Section -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                    <i data-lucide="file-lock-2" class="text-brand-500 w-8 h-8"></i>
+                    個資假名化與去識別化工具
+                </h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    自動辨識敏感欄位、產生一致性假名代碼（保留關聯性）、多種遮蔽與雜湊演算法、產出資料與安全對照表。
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="loadSampleData()" class="px-3 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="file-text" class="w-4 h-4 text-brand-500"></i>
+                    載入測試範例檔
+                </button>
+                <button onclick="resetApp()" class="px-3 py-2 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 text-sm font-medium rounded-lg transition flex items-center gap-1.5 border border-red-200 dark:border-red-800">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    重設
+                </button>
+            </div>
+        </header>
+
+        <!-- Stepper Bar -->
+        <nav aria-label="Progress">
+            <ol class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <li id="step-nav-1" class="border-l-4 border-brand-500 bg-white dark:bg-slate-800 p-3 rounded-r-lg shadow-sm flex items-center gap-3">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-white font-semibold text-xs">1</span>
+                    <div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">第一步</p>
+                        <p class="text-sm font-bold">上傳檔案</p>
+                    </div>
+                </li>
+                <li id="step-nav-2" class="step-inactive border-l-4 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 rounded-r-lg shadow-sm flex items-center gap-3">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs">2</span>
+                    <div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">第二步</p>
+                        <p class="text-sm font-bold">敏感辨識與策略設定</p>
+                    </div>
+                </li>
+                <li id="step-nav-3" class="step-inactive border-l-4 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 rounded-r-lg shadow-sm flex items-center gap-3">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs">3</span>
+                    <div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">第三步</p>
+                        <p class="text-sm font-bold">結果預覽對比</p>
+                    </div>
+                </li>
+                <li id="step-nav-4" class="step-inactive border-l-4 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 rounded-r-lg shadow-sm flex items-center gap-3">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs">4</span>
+                    <div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">第四步</p>
+                        <p class="text-sm font-bold">安全匯出</p>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+
+        <!-- STEP 1: Upload File Area -->
+        <section id="step-1" class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex-1 flex flex-col justify-center">
+            <div id="drop-zone" class="border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-brand-500 dark:hover:border-brand-500 rounded-xl p-8 text-center cursor-pointer transition-colors flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-800/50 hover:bg-brand-50/30 dark:hover:bg-brand-950/20">
+                <div class="p-4 bg-brand-50 dark:bg-brand-950/50 rounded-full text-brand-500 mb-4">
+                    <i data-lucide="upload-cloud" class="w-10 h-10"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">拖曳 Excel 或 CSV 檔案至此處，或點擊上傳</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">支援 .xlsx, .xls, .csv 檔案格式（資料量大時亦能維持高效能處理）</p>
+                <input type="file" id="file-input" accept=".xlsx, .xls, .csv" class="hidden">
+                <button onclick="document.getElementById('file-input').click()" class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg shadow transition flex items-center gap-2 text-sm">
+                    <i data-lucide="file-plus" class="w-4 h-4"></i> 選擇本地檔案
+                </button>
+            </div>
+            
+            <!-- File Info / Sheet Selector (Hidden initially) -->
+            <div id="file-info" class="hidden mt-6 p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                        <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p id="file-name" class="font-bold text-sm text-slate-800 dark:text-slate-100">data.xlsx</p>
+                        <p id="file-details" class="text-xs text-slate-500 dark:text-slate-400">0 KB | 0 行 | 0 欄</p>
+                    </div>
+                </div>
+                
+                <div id="sheet-selector-container" class="hidden flex items-center gap-2">
+                    <label for="sheet-select" class="text-xs font-semibold whitespace-nowrap">選擇工作表 (Sheet):</label>
+                    <select id="sheet-select" onchange="handleSheetChange()" class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 2: Sensitive Detection & Strategy Setup -->
+        <section id="step-2" class="hidden space-y-4">
+            <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold flex items-center gap-2">
+                            <i data-lucide="cpu" class="w-5 h-5 text-brand-500"></i> 敏感情資自動辨識與去識別化策略設定
+                        </h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">系統已分析表頭與內容，自動標記可能的敏感個資，請針對各欄位調整處理策略。</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="applyRecommendedAll()" class="text-xs px-3 py-1.5 bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800 rounded-lg hover:bg-brand-100 transition flex items-center gap-1 font-medium">
+                            <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> 套用全自動建議策略
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Global Salt Option for Hash & Pseudonym -->
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 text-xs">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="key-round" class="w-4 h-4 text-amber-500"></i>
+                        <span class="font-semibold">自訂資安鹽值 (Salt) / 前綴代碼：</span>
+                        <span class="text-slate-500">提高雜湊與假名對照之不可預測安全性</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="global-salt" value="SALT_2026_SECURE" placeholder="請輸入加鹽字串" class="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs focus:ring-1 focus:ring-brand-500 outline-none w-44">
+                        <input type="text" id="pseudo-prefix" value="ANON_" placeholder="假名前綴" class="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs focus:ring-1 focus:ring-brand-500 outline-none w-24">
+                    </div>
+                </div>
+
+                <!-- Mapping Table / Strategy Config Table -->
+                <div class="overflow-x-auto custom-scrollbar border border-slate-200 dark:border-slate-700 rounded-lg">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 uppercase font-bold border-b border-slate-200 dark:border-slate-600">
+                            <tr>
+                                <th class="p-3">欄位名稱</th>
+                                <th class="p-3">自動辨識敏感類別</th>
+                                <th class="p-3">資料範例 (頭兩筆)</th>
+                                <th class="p-3">去識別化/假名化策略選項</th>
+                                <th class="p-3">預期轉化效果說明</th>
+                            </tr>
+                        </thead>
+                        <tbody id="strategy-tbody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-5 flex justify-end gap-3">
+                    <button onclick="executePseudonymization()" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm rounded-lg shadow-md transition flex items-center gap-2">
+                        <i data-lucide="play" class="w-4 h-4"></i> 開始執行假名化處理
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 3: Preview Comparison -->
+        <section id="step-3" class="hidden space-y-4">
+            <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold flex items-center gap-2">
+                            <i data-lucide="split" class="w-5 h-5 text-brand-500"></i> 資料去識別化前後左右對照 preview
+                        </h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">即時比較原始敏感資料與轉換後的結果，確認資料關聯性與保護效果。</p>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs">
+                        <span id="record-count-badge" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 rounded-full font-semibold">總計: 0 筆記錄</span>
+                        <div class="flex items-center gap-1">
+                            <span class="w-3 h-3 bg-amber-100 dark:bg-amber-950/50 border border-amber-400 rounded-sm inline-block"></span>
+                            <span class="text-slate-500">已假名/去識別化欄位</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dual Table Comparison -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Left: Original Data Preview -->
+                    <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                        <div class="bg-slate-100 dark:bg-slate-700/70 p-2.5 font-bold text-xs border-b border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                            <i data-lucide="eye" class="w-4 h-4 text-slate-400"></i> 原始資料 (前 10 筆預覽)
+                        </div>
+                        <div class="overflow-x-auto max-h-80 custom-scrollbar">
+                            <table class="w-full text-left text-xs whitespace-nowrap">
+                                <thead id="original-preview-thead" class="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300 sticky top-0">
+                                </thead>
+                                <tbody id="original-preview-tbody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Right: Processed Data Preview -->
+                    <div class="border border-brand-200 dark:border-brand-900 rounded-lg overflow-hidden bg-brand-50/10 dark:bg-brand-950/10">
+                        <div class="bg-brand-500/10 dark:bg-brand-900/40 p-2.5 font-bold text-xs border-b border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 flex items-center gap-2">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-brand-500"></i> 去識別化後資料 (前 10 筆預覽)
+                        </div>
+                        <div class="overflow-x-auto max-h-80 custom-scrollbar">
+                            <table class="w-full text-left text-xs whitespace-nowrap">
+                                <thead id="processed-preview-thead" class="bg-brand-500/5 dark:bg-brand-950/40 border-b border-brand-200 dark:border-brand-800 font-semibold text-slate-600 dark:text-slate-300 sticky top-0">
+                                </thead>
+                                <tbody id="processed-preview-tbody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex justify-between items-center">
+                    <button onclick="goToStep(2)" class="px-4 py-2 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold rounded-lg transition">
+                        &larr; 返回修改策略
+                    </button>
+                    <button onclick="goToStep(4)" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm rounded-lg shadow transition flex items-center gap-2">
+                        下一步：匯出檔案與對照表 &rarr;
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 4: Export Options -->
+        <section id="step-4" class="hidden space-y-6">
+            <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                <h2 class="text-lg font-bold flex items-center gap-2 mb-2">
+                    <i data-lucide="download" class="w-5 h-5 text-brand-500"></i> 下載處理成果與安全資安稽核表
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">假名化資料檔可用於數據分析或跨機構協作；對照表可協助還原或作稽核留存，請妥善保管對照檔。</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Export Dataset Box -->
+                    <div class="p-5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-center gap-2 text-brand-600 dark:text-brand-400 font-bold mb-2">
+                                <i data-lucide="file-check" class="w-5 h-5"></i>
+                                <h3>匯出去識別化/假名化數據集</h3>
+                            </div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                已移除敏感資訊，並將識別號替換為保持關聯性的連續假名代碼。此檔案可安全交付研究分析使用。
+                            </p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2 pt-2">
+                            <button onclick="exportData('xlsx')" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center justify-center gap-2">
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> 下載 XLSX
+                            </button>
+                            <button onclick="exportData('csv')" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-lg shadow transition flex items-center justify-center gap-2">
+                                <i data-lucide="file-text" class="w-4 h-4"></i> 下載 CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Export Mapping Reference Key Box -->
+                    <div class="p-5 border border-amber-200 dark:border-amber-900/60 rounded-xl bg-amber-50/30 dark:bg-amber-950/10 flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold mb-2">
+                                <i data-lucide="key" class="w-5 h-5"></i>
+                                <h3>匯出假名化金鑰與原始對照字典 (Mapping Key)</h3>
+                            </div>
+                            <p class="text-xs text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
+                                包含原始個資值與假名代碼 (ANON_xxx) 之完整映射關係對照表。<strong>屬於高敏感檔案，請勿公開！</strong>
+                            </p>
+                        </div>
+                        <div class="space-y-3 pt-2">
+                            <div id="mapping-summary-text" class="text-xs text-slate-500 font-mono bg-white dark:bg-slate-900 p-2 rounded border border-amber-200 dark:border-amber-900">
+                                已建立 0 筆對照關係
+                            </div>
+                            <button onclick="exportMappingKey()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center justify-center gap-2">
+                                <i data-lucide="lock" class="w-4 h-4"></i> 下載金鑰對照檔 (XLSX)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-3 px-4 text-center text-xs text-slate-500 dark:text-slate-400">
+        <p>個資假名化工具 &copy; 2026 - 100% Client-Side Pure Browser Pseudonymization Architecture</p>
+    </footer>
+
+    <!-- App Logic JavaScript -->
+    <script>
+        // Global Application State
+        let rawWorkbook = null;
+        let activeSheetName = '';
+        let originalHeaders = [];
+        let originalRows = []; // Array of objects
+        let columnConfigs = {}; // Header -> Strategy Config
+        let processedRows = [];
+        let mappingDictionary = {}; // Strategy Mapping Matrix: { columnName: { originalValue: pseudoValue } }
+        let currentStep = 1;
+
+        // Sensitive Detection Categories & Regex Patterns
+        const SENSITIVE_PATTERNS = {
+            ID_CARD: {
+                name: '身分證字號 / ID',
+                keywords: ['id', '身分證', '身份证', '證號', 'national_id', 'passport', '護照'],
+                regex: /^[A-Za-z][1289]\d{8}$/,
+                recommendedStrategy: 'PSEUDO'
+            },
+            NAME: {
+                name: '姓名 / Name',
+                keywords: ['name', '姓名', '名字', '聯絡人', '客戶名', '患者'],
+                regex: /^[\u4e00-\u9fa5]{2,4}$/,
+                recommendedStrategy: 'PSEUDO'
+            },
+            PHONE: {
+                name: '電話 / 手機',
+                keywords: ['phone', 'tel', 'mobile', 'cell', '電話', '手機', '聯絡電話'],
+                regex: /^09\d{8}$|^0\d{1,2}-?\d{6,8}$/,
+                recommendedStrategy: 'MASK_PHONE'
+            },
+            EMAIL: {
+                name: '電子郵件 / Email',
+                keywords: ['email', 'mail', '信箱', '郵件'],
+                regex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                recommendedStrategy: 'MASK_EMAIL'
+            },
+            ADDRESS: {
+                name: '地址 / Address',
+                keywords: ['address', 'addr', '地址', '住址', '通訊處'],
+                regex: /^.+[縣市].+[鄉鎮市區].+/,
+                recommendedStrategy: 'GENERALIZE_ADDRESS'
+            },
+            CREDIT_CARD: {
+                name: '信用卡號 / Banking',
+                keywords: ['card', 'credit', 'bank', 'account', '信用卡', '卡號', '帳號'],
+                regex: /^\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}$/,
+                recommendedStrategy: 'MASK_CARD'
+            },
+            BIRTHDAY: {
+                name: '出生年月日 / 生日',
+                keywords: ['birth', 'dob', 'birthday', '生日', '出生日期'],
+                regex: /^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/,
+                recommendedStrategy: 'GENERALIZE_AGE'
+            }
+        };
+
+        // Initialize Lucide Icons
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            setupDragAndDrop();
+        });
+
+        // Theme Toggle
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('theme-icon');
+            if (document.documentElement.classList.contains('dark')) {
+                icon.setAttribute('data-lucide', 'sun');
+            } else {
+                icon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
+        }
+
+        // Drag & Drop Setup
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('border-brand-500', 'bg-brand-50/50');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('border-brand-500', 'bg-brand-50/50');
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) handleFileSelect(files[0]);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) handleFileSelect(e.target.files[0]);
+            });
+        }
+
+        // Load Built-in Sample CSV Data
+        function loadSampleData() {
+            const sampleCSV = `姓名,身分證字號,電話號碼,電子郵件,居住地址,出生日期,消費金額
+王小明,A123456789,0912345678,ming@example.com,台北市信義區信義路五段7號,1988-05-12,12500
+陳美麗,B220987654,0987654321,mary.chen@test.org,新北市板橋區縣民大道二段7號,1992-11-20,3200
+林中華,C101112131,0223456789,chung.lin@company.com,台中市西區台灣大道二段99號,1975-01-03,8800
+王小明,A123456789,0912345678,ming@example.com,台北市信義區信義路五段7號,1988-05-12,4500
+張偉傑,D199887766,0933112233,wj.chang@tech.io,高雄市苓雅區四維三路2號,2001-08-15,15000`;
+
+            const blob = new Blob([sampleCSV], { type: 'text/csv' });
+            const file = new File([blob], "sample_sensitive_data.csv", { type: "text/csv" });
+            handleFileSelect(file);
+        }
+
+        // File Parsing Logic (SheetJS)
+        function handleFileSelect(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                rawWorkbook = XLSX.read(data, { type: 'array' });
+                
+                // Show File Info
+                document.getElementById('file-info').classList.remove('hidden');
+                document.getElementById('file-name').innerText = file.name;
+
+                // Setup Sheet Selector
+                const sheetSelect = document.getElementById('sheet-select');
+                sheetSelect.innerHTML = '';
+                
+                if (rawWorkbook.SheetNames.length > 1) {
+                    document.getElementById('sheet-selector-container').classList.remove('hidden');
+                    rawWorkbook.SheetNames.forEach(sheetName => {
+                        const opt = document.createElement('option');
+                        opt.value = sheetName;
+                        opt.innerText = sheetName;
+                        sheetSelect.appendChild(opt);
+                    });
+                } else {
+                    document.getElementById('sheet-selector-container').classList.add('hidden');
+                }
+
+                activeSheetName = rawWorkbook.SheetNames[0];
+                parseCurrentSheet();
+                goToStep(2);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function handleSheetChange() {
+            activeSheetName = document.getElementById('sheet-select').value;
+            parseCurrentSheet();
+            analyzeSensitivityAndBuildUI();
+        }
+
+        function parseCurrentSheet() {
+            const worksheet = rawWorkbook.Sheets[activeSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            if (!jsonData || jsonData.length === 0) {
+                alert('警告：該工作表無資料或無法解析！');
+                return;
+            }
+
+            originalHeaders = jsonData[0].map(h => String(h || '').trim());
+            
+            // Build original rows array of objects
+            originalRows = [];
+            for (let i = 1; i < jsonData.length; i++) {
+                if (jsonData[i].length === 0) continue;
+                let rowObj = {};
+                originalHeaders.forEach((header, colIdx) => {
+                    rowObj[header] = jsonData[i][colIdx] !== undefined ? String(jsonData[i][colIdx]) : '';
+                });
+                originalRows.push(rowObj);
+            }
+
+            document.getElementById('file-details').innerText = 
+                `${(originalRows.length * 0.1).toFixed(1)} KB | ${originalRows.length} 行記錄 | ${originalHeaders.length} 欄位`;
+
+            analyzeSensitivityAndBuildUI();
+        }
+
+        // Automatic Sensitive Field Detection Algorithm
+        function analyzeSensitivityAndBuildUI() {
+            columnConfigs = {};
+
+            originalHeaders.forEach(col => {
+                let colLower = col.toLowerCase();
+                let matchedType = null;
+                let confidence = 'NONE';
+
+                // 1. Keyword Detection in Header
+                for (let key in SENSITIVE_PATTERNS) {
+                    const pattern = SENSITIVE_PATTERNS[key];
+                    if (pattern.keywords.some(kw => colLower.includes(kw))) {
+                        matchedType = key;
+                        confidence = 'HIGH';
+                        break;
+                    }
+                }
+
+                // 2. Data Content Regex Detection (Sample top 10 rows)
+                if (!matchedType && originalRows.length > 0) {
+                    const sampleValues = originalRows.slice(0, 10).map(r => r[col] || '');
+                    for (let key in SENSITIVE_PATTERNS) {
+                        const pattern = SENSITIVE_PATTERNS[key];
+                        const matchCount = sampleValues.filter(val => pattern.regex.test(val.trim())).length;
+                        if (matchCount > 0) {
+                            matchedType = key;
+                            confidence = matchCount > 5 ? 'HIGH' : 'MEDIUM';
+                            break;
+                        }
+                    }
+                }
+
+                columnConfigs[col] = {
+                    colName: col,
+                    detectedType: matchedType,
+                    confidence: confidence,
+                    strategy: matchedType ? SENSITIVE_PATTERNS[matchedType].recommendedStrategy : 'KEEP',
+                    counter: 0
+                };
+            });
+
+            renderStrategyTable();
+        }
+
+        // Render Step 2 Strategy Table
+        function renderStrategyTable() {
+            const tbody = document.getElementById('strategy-tbody');
+            tbody.innerHTML = '';
+
+            originalHeaders.forEach(col => {
+                const config = columnConfigs[col];
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/60 transition';
+
+                // Sample values preview
+                const samples = originalRows.slice(0, 2).map(r => r[col]).filter(Boolean).join(', ');
+
+                // Confidence Tag Badge
+                let badgeHtml = '<span class="text-slate-400">一般資料</span>';
+                if (config.detectedType) {
+                    const typeInfo = SENSITIVE_PATTERNS[config.detectedType];
+                    const badgeColor = config.confidence === 'HIGH' ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300';
+                    badgeHtml = `<span class="px-2 py-0.5 rounded text-[11px] font-bold ${badgeColor}">
+                                    <i data-lucide="alert-triangle" class="w-3 h-3 inline mr-1"></i>${typeInfo.name} (${config.confidence})
+                                 </span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-200">${col}</td>
+                    <td class="p-3">${badgeHtml}</td>
+                    <td class="p-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] max-w-xs truncate" title="${samples}">${samples || '(空白)'}</td>
+                    <td class="p-3">
+                        <select onchange="updateColumnStrategy('${col}', this.value)" class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-brand-500 font-medium">
+                            <option value="KEEP" ${config.strategy === 'KEEP' ? 'selected' : ''}>[保留] 不修改原值</option>
+                            <option value="PSEUDO" ${config.strategy === 'PSEUDO' ? 'selected' : ''}>[假名化] 一致性代碼 (保留關聯, ANON_xxx)</option>
+                            <option value="HASH_SHA256" ${config.strategy === 'HASH_SHA256' ? 'selected' : ''}>[雜湊] SHA-256 (不可逆+加鹽)</option>
+                            <option value="MASK_NAME" ${config.strategy === 'MASK_NAME' ? 'selected' : ''}>[遮蔽] 姓名 (例: 王*明 / 張*)</option>
+                            <option value="MASK_PHONE" ${config.strategy === 'MASK_PHONE' ? 'selected' : ''}>[遮蔽] 電話 (例: 0912-***-789)</option>
+                            <option value="MASK_EMAIL" ${config.strategy === 'MASK_EMAIL' ? 'selected' : ''}>[遮蔽] 信箱 (例: a***@domain.com)</option>
+                            <option value="MASK_CARD" ${config.strategy === 'MASK_CARD' ? 'selected' : ''}>[遮蔽] 卡號/帳號 (保留後4碼)</option>
+                            <option value="GENERALIZE_ADDRESS" ${config.strategy === 'GENERALIZE_ADDRESS' ? 'selected' : ''}>[概括化] 地址 (僅保留縣市區)</option>
+                            <option value="GENERALIZE_AGE" ${config.strategy === 'GENERALIZE_AGE' ? 'selected' : ''}>[概括化] 生日轉年齡區間 (如: 30-39歲)</option>
+                            <option value="SUPPRESS" ${config.strategy === 'SUPPRESS' ? 'selected' : ''}>[抑制] 移除/填空值 (NULL)</option>
+                        </select>
+                    </td>
+                    <td class="p-3 text-slate-400 text-[11px]" id="strategy-desc-${col}">
+                        ${getStrategyDesc(config.strategy)}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        function updateColumnStrategy(col, strategy) {
+            columnConfigs[col].strategy = strategy;
+            document.getElementById(`strategy-desc-${col}`).innerText = getStrategyDesc(strategy);
+        }
+
+        function getStrategyDesc(strategy) {
+            switch (strategy) {
+                case 'KEEP': return '原值保留，不作處理。';
+                case 'PSEUDO': return '使用字典轉換為 ANON_001 等連續編號，相同值對應相同編號。';
+                case 'HASH_SHA256': return '採用 SHA-256 與鹽值進行不可逆雜湊。';
+                case 'MASK_NAME': return '將中間字遮蔽為星號 (*)。';
+                case 'MASK_PHONE': return '遮蔽中間 3~4 碼數字。';
+                case 'MASK_EMAIL': return '保留首字與 Domain，隱藏帳號名稱。';
+                case 'MASK_CARD': return '前 12 碼隱藏，僅保留末 4 碼。';
+                case 'GENERALIZE_ADDRESS': return '僅保留至「縣市/鄉鎮市區」，移除後續門牌號碼。';
+                case 'GENERALIZE_AGE': return '將出生日期計算轉換為 10 歲一區間 (例: 30-39歲)。';
+                case 'SUPPRESS': return '直接抹除資料，設為空值。';
+                default: return '';
+            }
+        }
+
+        function applyRecommendedAll() {
+            for (let col in columnConfigs) {
+                const conf = columnConfigs[col];
+                if (conf.detectedType) {
+                    conf.strategy = SENSITIVE_PATTERNS[conf.detectedType].recommendedStrategy;
+                } else {
+                    conf.strategy = 'KEEP';
+                }
+            }
+            renderStrategyTable();
+        }
+
+        // Step Navigation Logic
+        function goToStep(stepNum) {
+            currentStep = stepNum;
+            for (let i = 1; i <= 4; i++) {
+                const sec = document.getElementById(`step-${i}`);
+                const nav = document.getElementById(`step-nav-${i}`);
+                if (i === stepNum) {
+                    sec.classList.remove('hidden');
+                    nav.classList.remove('step-inactive');
+                    nav.classList.add('border-brand-500');
+                } else {
+                    sec.classList.add('hidden');
+                    if (i > stepNum) nav.classList.add('step-inactive');
+                }
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Core Pseudonymization Execution Engine
+        async function executePseudonymization() {
+            mappingDictionary = {};
+            processedRows = [];
+
+            const salt = document.getElementById('global-salt').value || 'SALT_DEFAULT';
+            const prefix = document.getElementById('pseudo-prefix').value || 'ANON_';
+
+            // Initialize Mapping Dict for columns set to 'PSEUDO'
+            originalHeaders.forEach(col => {
+                mappingDictionary[col] = {};
+            });
+
+            // Sequential Counter Map for Pseudonyms
+            let colCounters = {};
+
+            for (let r = 0; r < originalRows.length; r++) {
+                const row = originalRows[r];
+                let newRow = {};
+
+                for (let c = 0; c < originalHeaders.length; c++) {
+                    const col = originalHeaders[c];
+                    const val = String(row[col] || '').trim();
+                    const strategy = columnConfigs[col].strategy;
+
+                    if (!val || strategy === 'KEEP') {
+                        newRow[col] = val;
+                        continue;
+                    }
+
+                    switch (strategy) {
+                        case 'PSEUDO':
+                            if (!mappingDictionary[col][val]) {
+                                colCounters[col] = (colCounters[col] || 0) + 1;
+                                const formattedNum = String(colCounters[col]).padStart(3, '0');
+                                mappingDictionary[col][val] = `${prefix}${formattedNum}`;
+                            }
+                            newRow[col] = mappingDictionary[col][val];
+                            break;
+
+                        case 'HASH_SHA256':
+                            newRow[col] = await computeSHA256(val + salt);
+                            break;
+
+                        case 'MASK_NAME':
+                            newRow[col] = maskName(val);
+                            break;
+
+                        case 'MASK_PHONE':
+                            newRow[col] = maskPhone(val);
+                            break;
+
+                        case 'MASK_EMAIL':
+                            newRow[col] = maskEmail(val);
+                            break;
+
+                        case 'MASK_CARD':
+                            newRow[col] = val.length >= 4 ? '*'.repeat(val.length - 4) + val.slice(-4) : '****';
+                            break;
+
+                        case 'GENERALIZE_ADDRESS':
+                            newRow[col] = generalizeAddress(val);
+                            break;
+
+                        case 'GENERALIZE_AGE':
+                            newRow[col] = generalizeAge(val);
+                            break;
+
+                        case 'SUPPRESS':
+                            newRow[col] = '';
+                            break;
+
+                        default:
+                            newRow[col] = val;
+                    }
+                }
+                processedRows.push(newRow);
+            }
+
+            renderPreviewTables();
+            updateMappingSummary();
+            goToStep(3);
+        }
+
+        // SHA-256 Web Crypto Implementation
+        async function computeSHA256(text) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Value Transformation Helper Functions
+        function maskName(name) {
+            if (name.length <= 2) return name[0] + '*';
+            return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
+        }
+
+        function maskPhone(phone) {
+            return phone.replace(/(\d{3,4})\d{3,4}(\d{3,4})/, '$1-****-$2');
+        }
+
+        function maskEmail(email) {
+            const parts = email.split('@');
+            if (parts.length < 2) return '***@***';
+            const name = parts[0];
+            const maskedName = name.length <= 2 ? name[0] + '*' : name[0] + '***' + name[name.length - 1];
+            return `${maskedName}@${parts[1]}`;
+        }
+
+        function generalizeAddress(addr) {
+            const match = addr.match(/^(.+?[縣市].+?[鄉鎮市區])/);
+            return match ? match[1] : (addr.substring(0, 6) + '...');
+        }
+
+        function generalizeAge(dateStr) {
+            const birthYear = new Date(dateStr).getFullYear();
+            if (isNaN(birthYear)) return '不詳';
+            const age = new Date().getFullYear() - birthYear;
+            const ageGroup = Math.floor(age / 10) * 10;
+            return `${ageGroup}-${ageGroup + 9}歲`;
+        }
+
+        // Render Step 3 Dual Preview Tables
+        function renderPreviewTables() {
+            document.getElementById('record-count-badge').innerText = `總計: ${processedRows.length} 筆記錄`;
+
+            const origThead = document.getElementById('original-preview-thead');
+            const procThead = document.getElementById('processed-preview-thead');
+            const origTbody = document.getElementById('original-preview-tbody');
+            const procTbody = document.getElementById('processed-preview-tbody');
+
+            let headerTrHtml = '<tr>';
+            originalHeaders.forEach(h => {
+                headerTrHtml += `<th class="p-2.5">${h}</th>`;
+            });
+            headerTrHtml += '</tr>';
+
+            origThead.innerHTML = headerTrHtml;
+            procThead.innerHTML = headerTrHtml;
+
+            origTbody.innerHTML = '';
+            procTbody.innerHTML = '';
+
+            const previewLimit = Math.min(10, processedRows.length);
+
+            for (let i = 0; i < previewLimit; i++) {
+                const origRow = originalRows[i];
+                const procRow = processedRows[i];
+
+                let origTr = '<tr class="hover:bg-slate-100 dark:hover:bg-slate-700/50">';
+                let procTr = '<tr class="hover:bg-brand-100/30 dark:hover:bg-brand-900/30">';
+
+                originalHeaders.forEach(col => {
+                    const isModified = columnConfigs[col].strategy !== 'KEEP';
+                    const highlightClass = isModified ? 'bg-amber-100/60 dark:bg-amber-950/40 font-semibold' : '';
+
+                    origTr += `<td class="p-2.5 text-slate-600 dark:text-slate-300 ${highlightClass}">${origRow[col] || ''}</td>`;
+                    procTr += `<td class="p-2.5 text-slate-800 dark:text-slate-100 ${highlightClass}">${procRow[col] || ''}</td>`;
+                });
+
+                origTr += '</tr>';
+                procTr += '</tr>';
+
+                origTbody.innerHTML += origTr;
+                procTbody.innerHTML += procTr;
+            }
+        }
+
+        function updateMappingSummary() {
+            let totalMappings = 0;
+            for (let col in mappingDictionary) {
+                totalMappings += Object.keys(mappingDictionary[col]).length;
+            }
+            document.getElementById('mapping-summary-text').innerText = 
+                `已建置 ${Object.keys(mappingDictionary).filter(k => Object.keys(mappingDictionary[k]).length > 0).length} 個假名化欄位，共 ${totalMappings} 筆映射關係對照。`;
+        }
+
+        // STEP 4: Export Operations
+        function exportData(format) {
+            if (processedRows.length === 0) return alert('無可匯出資料');
+
+            const ws = XLSX.utils.json_to_sheet(processedRows, { header: originalHeaders });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "去識別化資料");
+
+            const fileName = `pseudonymized_data_${new Date().toISOString().slice(0, 10)}.${format}`;
+            
+            if (format === 'csv') {
+                XLSX.writeFile(wb, fileName, { bookType: 'csv' });
+            } else {
+                XLSX.writeFile(wb, fileName, { bookType: 'xlsx' });
+            }
+        }
+
+        function exportMappingKey() {
+            const wb = XLSX.utils.book_new();
+            let hasData = false;
+
+            for (let col in mappingDictionary) {
+                const dict = mappingDictionary[col];
+                const entries = Object.keys(dict);
+
+                if (entries.length > 0) {
+                    hasData = true;
+                    const sheetData = entries.map(origVal => ({
+                        '原始真實個資 (Original Value)': origVal,
+                        '假名化對照代碼 (Pseudonym ID)': dict[origVal]
+                    }));
+
+                    const ws = XLSX.utils.json_to_sheet(sheetData);
+                    // Safe sheet title length limit
+                    const safeSheetName = `對照表_${col}`.substring(0, 30);
+                    XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+                }
+            }
+
+            if (!hasData) {
+                alert('當前設定中未包含任何「一致性假名代碼 (ANON_xxx)」轉化策略，故無需匯出對照金鑰。');
+                return;
+            }
+
+            const fileName = `SECRET_Mapping_Dictionary_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // Reset App State
+        function resetApp() {
+            rawWorkbook = null;
+            originalHeaders = [];
+            originalRows = [];
+            processedRows = [];
+            mappingDictionary = {};
+            document.getElementById('file-input').value = '';
+            document.getElementById('file-info').classList.add('hidden');
+            goToStep(1);
+        }
+    </script>
+</body>
+</html>

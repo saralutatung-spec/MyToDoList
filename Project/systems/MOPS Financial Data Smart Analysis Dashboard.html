@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公開資訊觀測站 MOPS 財務數據智慧解析儀表板</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (xlsx) CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Font Awesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        mops: '#1e3a8a'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 max-w-md px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 bg-slate-900 text-white pointer-events-none">
+        <i id="toastIcon" class="fa-solid fa-circle-info text-sky-400 text-lg"></i>
+        <div id="toastMessage" class="text-sm font-medium">訊息通知</div>
+    </div>
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-sky-500/30">
+                    <i class="fa-solid fa-chart-line text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-wide">MOPS 財務數據智慧解析儀表板</h1>
+                    <p class="text-xs text-slate-400">公開資訊觀測站通用財報分析工具</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="loadSampleBtn" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 hover:bg-sky-500 text-white transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-file-import"></i> 載入 TSMC 範例數據
+                </button>
+                <button id="clearBtn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5 border border-slate-700">
+                    <i class="fa-solid fa-rotate-left"></i> 清除數據
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Company & Report Meta Box (Dynamic) -->
+        <div id="metaInfoCard" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 text-xl font-bold">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 id="companyName" class="text-xl font-bold text-slate-900">未載入公司資料</h2>
+                        <span id="reportPeriod" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800">請匯入資料</span>
+                    </div>
+                    <p id="reportType" class="text-xs text-slate-500 mt-0.5">貼上文字或上傳 Excel 以開始解析財務報表指標</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-6 text-sm">
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 block">解析科目數量</span>
+                    <span id="parsedItemCount" class="font-bold text-slate-700 text-base">0 項</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 block">比較期間</span>
+                    <span id="comparisonPeriods" class="font-bold text-slate-700 text-base">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 1: Data Input Panel (Collapsible or Tabs) -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+            <div class="border-b border-slate-100 px-6 py-4 bg-slate-50/50 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice text-sky-600"></i> 數據匯入與智慧解析模組
+                </h3>
+                <div class="flex items-center gap-2 bg-slate-200/60 p-1 rounded-xl text-xs font-medium">
+                    <button id="tabTextBtn" class="px-3 py-1 rounded-lg bg-white shadow-sm text-sky-700 font-semibold transition">文字貼上 (TSV)</button>
+                    <button id="tabFileBtn" class="px-3 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition">檔案上傳 (XLSX/CSV)</button>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <!-- Text Paste Mode -->
+                <div id="textInputArea" class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label for="rawTextInput" class="text-xs font-semibold text-slate-600">請從 MOPS 網頁直接複製整張表格內容（Ctrl+A / Ctrl+C）並貼於下方：</label>
+                        <span class="text-xs text-slate-400">支援預設表格、文字分隔對齊</span>
+                    </div>
+                    <textarea id="rawTextInput" rows="5" class="w-full p-3 text-xs font-mono rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition custom-scrollbar" placeholder="例如：
+本資料由台積電公司提供
+民國115年第2季
+會計項目	115年01月01日至115年06月30日	114年01月01日至114年06月30日
+營業活動之現金流量－間接法
+本期稅前淨利（淨損）	1,550,229,773	923,930,616
+折舊費用	359,541,458	359,012,194..."></textarea>
+                    <div class="flex justify-end">
+                        <button id="parseTextBtn" class="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-medium text-sm transition shadow-sm flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> 解析貼上文字
+                        </button>
+                    </div>
+                </div>
+
+                <!-- File Upload Mode (Hidden by default) -->
+                <div id="fileInputArea" class="hidden space-y-4">
+                    <div id="dropZone" class="border-2 border-dashed border-slate-300 hover:border-sky-500 bg-slate-50/50 hover:bg-sky-50/30 rounded-2xl p-8 text-center transition cursor-pointer flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-cloud-arrow-up text-4xl text-sky-500 mb-3"></i>
+                        <p class="text-sm font-semibold text-slate-700">拖曳 Excel / CSV 檔案至此處，或點擊選擇檔案</p>
+                        <p class="text-xs text-slate-400 mt-1">支援 .xlsx, .xls, .csv 檔案格式（公開資訊觀測站導出報表）</p>
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Key Financial Metrics KPI Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Operating Cash Flow Card -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 relative overflow-hidden">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">營業活動淨現金流量</div>
+                <div id="kpiOpCash" class="text-2xl font-bold text-slate-900 mb-2">--</div>
+                <div class="flex items-center text-xs gap-1.5" id="kpiOpCashDiffContainer">
+                    <span id="kpiOpCashBadge" class="px-1.5 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600">--</span>
+                    <span id="kpiOpCashSub" class="text-slate-500">對比前期</span>
+                </div>
+                <div class="absolute right-4 top-4 text-sky-500/10 text-4xl"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+            </div>
+
+            <!-- Free Cash Flow Card -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 relative overflow-hidden">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">自由現金流量 (FCF)</div>
+                <div id="kpiFcf" class="text-2xl font-bold text-slate-900 mb-2">--</div>
+                <div class="flex items-center text-xs gap-1.5">
+                    <span id="kpiFcfBadge" class="px-1.5 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600">--</span>
+                    <span class="text-slate-500">營業現金流 - 資本支出</span>
+                </div>
+                <div class="absolute right-4 top-4 text-emerald-500/10 text-4xl"><i class="fa-solid fa-vault"></i></div>
+            </div>
+
+            <!-- Net Profit Before Tax Card -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 relative overflow-hidden">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">繼續營業單位稅前淨利</div>
+                <div id="kpiNetIncome" class="text-2xl font-bold text-slate-900 mb-2">--</div>
+                <div class="flex items-center text-xs gap-1.5">
+                    <span id="kpiNetIncomeBadge" class="px-1.5 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600">--</span>
+                    <span class="text-slate-500">獲利品質基準</span>
+                </div>
+                <div class="absolute right-4 top-4 text-indigo-500/10 text-4xl"><i class="fa-solid fa-coins"></i></div>
+            </div>
+
+            <!-- Net Cash Increase Card -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 relative overflow-hidden">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">現金及約當現金淨增加</div>
+                <div id="kpiNetCashIncrease" class="text-2xl font-bold text-slate-900 mb-2">--</div>
+                <div class="flex items-center text-xs gap-1.5">
+                    <span id="kpiNetCashBadge" class="px-1.5 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600">--</span>
+                    <span class="text-slate-500">期末與期初差額</span>
+                </div>
+                <div class="absolute right-4 top-4 text-purple-500/10 text-4xl"><i class="fa-solid fa-piggy-bank"></i></div>
+            </div>
+        </section>
+
+        <!-- Section 3: Visual Analytics Charts -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Chart 1: Cash Flow Category Comparison -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h4 class="font-bold text-slate-800">三大現金流量分項比較</h4>
+                        <p class="text-xs text-slate-400">營業活動 vs 投資活動 vs 籌資活動</p>
+                    </div>
+                    <select id="chart1Type" class="text-xs border border-slate-300 rounded-lg p-1.5 outline-none bg-slate-50">
+                        <option value="bar">柱狀圖 (Bar)</option>
+                        <option value="line">折線圖 (Line)</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-h-[300px] relative">
+                    <canvas id="cashFlowCategoryChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Operating Adjustments / Key Items Breakdown -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h4 class="font-bold text-slate-800">核心營運調整項目分析</h4>
+                        <p class="text-xs text-slate-400">折舊、攤銷、利息收入/費用與稅前淨利關係</p>
+                    </div>
+                    <select id="chart2Type" class="text-xs border border-slate-300 rounded-lg p-1.5 outline-none bg-slate-50">
+                        <option value="doughnut">環狀圖 (Doughnut)</option>
+                        <option value="bar">橫向長條圖 (Horizontal Bar)</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-h-[300px] relative">
+                    <canvas id="adjustmentsChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Data Search & Full Table View -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-table text-sky-600"></i> 解析後財務報表細項明細
+                    </h3>
+                    <p class="text-xs text-slate-400">支援即時關鍵字搜尋與金額比較</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="searchInput" placeholder="搜尋會計項目..." class="pl-9 pr-4 py-1.5 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none w-60">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table View -->
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-600">
+                            <th class="py-3 px-6 font-semibold w-12">#</th>
+                            <th class="py-3 px-6 font-semibold cursor-pointer hover:bg-slate-100 transition" id="sortCategory">
+                                會計項目 <i class="fa-solid fa-sort text-slate-300 ml-1"></i>
+                            </th>
+                            <th class="py-3 px-6 font-semibold text-right" id="thPeriod1">本期金額</th>
+                            <th class="py-3 px-6 font-semibold text-right" id="thPeriod2">前期金額</th>
+                            <th class="py-3 px-6 font-semibold text-right">變動金額</th>
+                            <th class="py-3 px-6 font-semibold text-right">變動比例 (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="divide-y divide-slate-100 text-slate-700">
+                        <tr>
+                            <td colspan="6" class="py-12 text-center text-slate-400">
+                                <i class="fa-solid fa-inbox text-3xl mb-2 block"></i>
+                                尚未載入財務數據，請貼上文字或匯入檔案
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-8 text-center text-xs text-slate-400">
+        公開資訊觀測站 (MOPS) 數據解析儀表板 &bull; 純前端安全解析（數據不離開本機端）
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // TSMC Sample TSV Text (From uploaded Cash Flow statement)
+        const SAMPLE_TSMC_DATA = `本資料由台積電公司提供
+民國115年第2季
+會計項目	115年01月01日至115年06月30日	114年01月01日至114年06月30日
+金額	金額
+營業活動之現金流量－間接法	
+　繼續營業單位稅前淨利（淨損）	1,550,229,773	923,930,616
+　本期稅前淨利（淨損）	1,550,229,773	923,930,616
+　折舊費用	359,541,458	359,012,194
+　攤銷費用	4,447,147	4,184,797
+　預期信用減損損失（利益）數／呆帳費用提列（轉列收入）數	51,743	-25,220
+　透過損益按公允價值衡量金融資產及負債之淨損失（利益）	-301,612	-204,315
+　利息費用	5,801,911	6,368,369
+　利息收入	-58,906,984	-50,051,310
+　股利收入	-1,971,050	-463,552
+　股份基礎給付酬勞成本	2,370,260	799,647
+　處分及報廢不動產、廠房及設備淨損失（利益）	2,805,095	1,411,260
+　收益費損項目合計	313,837,968	320,831,870
+　與營業活動相關之資產／負債變動數	-120,450,112	-45,112,000
+　營業活動之淨現金流入（流出）	1,743,617,629	1,199,650,486
+投資活動之現金流量	
+　取得不動產、廠房及設備	-650,230,000	-420,150,000
+　取得無形資產	-3,100,500	-2,800,000
+　投資活動之淨現金流入（流出）	-680,500,000	-450,200,000
+籌資活動之現金流量	
+　發行公司債	50,000,000	20,000,000
+　發放現金股利	-230,500,000	-200,000,000
+　籌資活動之淨現金流入（流出）	-210,000,000	-180,000,000
+匯率變動對現金及約當現金之影響	12,500,000	-5,200,000
+本期現金及約當現金淨增加（減少）數	865,617,629	564,250,486`;
+
+        // State Management
+        let appState = {
+            companyName: '',
+            reportPeriod: '',
+            period1Name: '本期',
+            period2Name: '前期',
+            items: [],
+            filteredItems: [],
+            metrics: {
+                opCashP1: 0, opCashP2: 0,
+                invCashP1: 0, invCashP2: 0,
+                finCashP1: 0, finCashP2: 0,
+                netIncomeP1: 0, netIncomeP2: 0,
+                depreciationP1: 0, depreciationP2: 0,
+                capexP1: 0, capexP2: 0,
+                netCashIncreaseP1: 0, netCashIncreaseP2: 0,
+                fcfP1: 0, fcfP2: 0
+            }
+        };
+
+        // Chart instances
+        let categoryChart = null;
+        let adjustmentsChart = null;
+
+        // DOM Loaded Init
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            loadSampleData(); // Load default TSMC data
+        });
+
+        // Event Listeners Setup
+        function setupEventListeners() {
+            // Tabs toggle
+            document.getElementById('tabTextBtn').addEventListener('click', () => switchTab('text'));
+            document.getElementById('tabFileBtn').addEventListener('click', () => switchTab('file'));
+
+            // Parse text button
+            document.getElementById('parseTextBtn').addEventListener('click', () => {
+                const text = document.getElementById('rawTextInput').value;
+                if (!text.trim()) {
+                    showToast('請先貼入 MOPS 表格文字', 'error');
+                    return;
+                }
+                parseMopsText(text);
+            });
+
+            // Sample data button
+            document.getElementById('loadSampleBtn').addEventListener('click', loadSampleData);
+
+            // Clear button
+            document.getElementById('clearBtn').addEventListener('click', clearData);
+
+            // File Upload Drag & Drop
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('excelFileInput');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-sky-500', 'bg-sky-50/50');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-sky-500', 'bg-sky-50/50');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-sky-500', 'bg-sky-50/50');
+                if (e.dataTransfer.files.length > 0) {
+                    handleFileUpload(e.dataTransfer.files[0]);
+                }
+            });
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+
+            // Search input filter
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                filterTable(e.target.value);
+            });
+
+            // Chart Type Selectors
+            document.getElementById('chart1Type').addEventListener('change', updateCharts);
+            document.getElementById('chart2Type').addEventListener('change', updateCharts);
+        }
+
+        // Tab Switching
+        function switchTab(mode) {
+            const textBtn = document.getElementById('tabTextBtn');
+            const fileBtn = document.getElementById('tabFileBtn');
+            const textArea = document.getElementById('textInputArea');
+            const fileArea = document.getElementById('fileInputArea');
+
+            if (mode === 'text') {
+                textBtn.className = 'px-3 py-1 rounded-lg bg-white shadow-sm text-sky-700 font-semibold transition';
+                fileBtn.className = 'px-3 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition';
+                textArea.classList.remove('hidden');
+                fileArea.classList.add('hidden');
+            } else {
+                fileBtn.className = 'px-3 py-1 rounded-lg bg-white shadow-sm text-sky-700 font-semibold transition';
+                textBtn.className = 'px-3 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition';
+                fileArea.classList.remove('hidden');
+                textArea.classList.add('hidden');
+            }
+        }
+
+        // Load Sample TSMC Data
+        function loadSampleData() {
+            document.getElementById('rawTextInput').value = SAMPLE_TSMC_DATA;
+            parseMopsText(SAMPLE_TSMC_DATA);
+            showToast('已成功載入台積電現金流量表範例');
+        }
+
+        // Clear All Data
+        function clearData() {
+            document.getElementById('rawTextInput').value = '';
+            appState.items = [];
+            appState.filteredItems = [];
+            renderUI();
+            showToast('已清除數據', 'info');
+        }
+
+        // Toast Notification Helper
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = msg;
+            if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-triangle-exclamation text-rose-400 text-lg';
+            } else if (type === 'info') {
+                toastIcon.className = 'fa-solid fa-circle-info text-sky-400 text-lg';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Helper: Number Sanitizer
+        function cleanNumber(val) {
+            if (val === undefined || val === null) return 0;
+            if (typeof val === 'number') return val;
+            let str = val.toString().trim();
+            
+            // Handle European/German style formatting like 1.550.229.773 -> 1550229773
+            // If string has multiple dots and no commas, treat dots as thousand separators
+            const dotMatches = (str.match(/\./g) || []).length;
+            const commaMatches = (str.match(/,/g) || []).length;
+
+            if (dotMatches > 1 && commaMatches === 0) {
+                str = str.replace(/\./g, '');
+            } else {
+                str = str.replace(/,/g, '');
+            }
+
+            // Handle negative formatting like (1,000) or (1.000)
+            if (str.startsWith('(') && str.endsWith(')')) {
+                str = '-' + str.substring(1, str.length - 1);
+            }
+            const num = parseFloat(str);
+            return isNaN(num) ? 0 : num;
+        }
+
+        // Helper: Format Big Numbers with Currency Units
+        function formatMoney(num) {
+            if (num === null || num === undefined || isNaN(num)) return '--';
+            const abs = Math.abs(num);
+            if (abs >= 1e8) {
+                return (num / 1e8).toFixed(2) + ' 億';
+            } else if (abs >= 1e4) {
+                return (num / 1e4).toFixed(2) + ' 萬';
+            }
+            return num.toLocaleString();
+        }
+
+        // Parse Text Mode (TSV / MOPS Paste)
+        function parseMopsText(text) {
+            try {
+                const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                if (lines.length < 2) {
+                    showToast('貼入之內容行數不足', 'error');
+                    return;
+                }
+
+                let company = '公開資訊觀測站公司';
+                let period = '最新一期';
+                let headerRowIndex = -1;
+                let period1Name = '本期';
+                let period2Name = '前期';
+
+                // Look for Header Keywords
+                for (let i = 0; i < Math.min(lines.length, 6); i++) {
+                    const line = lines[i];
+                    if (line.includes('公司') || line.includes('本資料由')) {
+                        company = line.replace('本資料由', '').replace('提供', '').trim();
+                    }
+                    if (line.includes('民國') || line.includes('季') || line.includes('年度')) {
+                        period = line.trim();
+                    }
+                    if (line.includes('會計項目') || line.includes('項目')) {
+                        headerRowIndex = i;
+                        const parts = line.split('\t').map(p => p.trim()).filter(p => p.length > 0);
+                        if (parts.length >= 3) {
+                            period1Name = parts[1];
+                            period2Name = parts[2];
+                        }
+                    }
+                }
+
+                if (headerRowIndex === -1) {
+                    // Try auto split
+                    headerRowIndex = 0;
+                }
+
+                const parsedItems = [];
+                for (let i = headerRowIndex + 1; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (line.includes('金額') && !line.includes('會計項目')) continue; // Skip sub-headers
+
+                    // Split by Tab or 2+ spaces
+                    let parts = line.split('\t');
+                    if (parts.length < 2) {
+                        parts = line.split(/\s{2,}/);
+                    }
+
+                    if (parts.length >= 1) {
+                        const itemName = parts[0].replace(/^[　\s]+/, '').trim(); // Trim fullwidth spaces
+                        if (!itemName) continue;
+
+                        const val1 = parts.length > 1 ? cleanNumber(parts[1]) : 0;
+                        const val2 = parts.length > 2 ? cleanNumber(parts[2]) : 0;
+
+                        parsedItems.push({
+                            id: parsedItems.length + 1,
+                            name: itemName,
+                            val1: val1,
+                            val2: val2,
+                            diff: val1 - val2,
+                            diffPct: val2 !== 0 ? ((val1 - val2) / Math.abs(val2)) * 100 : 0
+                        });
+                    }
+                }
+
+                appState.companyName = company;
+                appState.reportPeriod = period;
+                appState.period1Name = period1Name;
+                appState.period2Name = period2Name;
+                appState.items = parsedItems;
+                appState.filteredItems = [...parsedItems];
+
+                calculateFinancialMetrics();
+                renderUI();
+                showToast('資料解析成功！');
+
+            } catch (err) {
+                console.error(err);
+                showToast('解析資料時發生錯誤，請檢查文字格式', 'error');
+            }
+        }
+
+        // File Upload Handler (SheetJS)
+        function handleFileUpload(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const tsvText = XLSX.utils.sheet_to_txt(worksheet);
+                    
+                    parseMopsText(tsvText);
+                } catch (err) {
+                    console.error(err);
+                    showToast('無法讀取 Excel 檔案，請確認格式', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Automated Financial Metrics Calculation Engine
+        function calculateFinancialMetrics() {
+            const items = appState.items;
+            let m = {
+                opCashP1: 0, opCashP2: 0,
+                invCashP1: 0, invCashP2: 0,
+                finCashP1: 0, finCashP2: 0,
+                netIncomeP1: 0, netIncomeP2: 0,
+                depreciationP1: 0, depreciationP2: 0,
+                capexP1: 0, capexP2: 0,
+                netCashIncreaseP1: 0, netCashIncreaseP2: 0,
+                fcfP1: 0, fcfP2: 0
+            };
+
+            items.forEach(item => {
+                const name = item.name;
+
+                // Operating Cash Flow
+                if (name.includes('營業活動之淨現金流入') || name.includes('營業活動之淨現金流量')) {
+                    m.opCashP1 = item.val1;
+                    m.opCashP2 = item.val2;
+                }
+                // Investing Cash Flow
+                if (name.includes('投資活動之淨現金流入') || name.includes('投資活動之淨現金流量')) {
+                    m.invCashP1 = item.val1;
+                    m.invCashP2 = item.val2;
+                }
+                // Financing Cash Flow
+                if (name.includes('籌資活動之淨現金流入') || name.includes('籌資活動之淨現金流量')) {
+                    m.finCashP1 = item.val1;
+                    m.finCashP2 = item.val2;
+                }
+                // Profit Before Tax
+                if (name.includes('繼續營業單位稅前淨利') || name.includes('本期稅前淨利')) {
+                    if (m.netIncomeP1 === 0) {
+                        m.netIncomeP1 = item.val1;
+                        m.netIncomeP2 = item.val2;
+                    }
+                }
+                // Depreciation
+                if (name.includes('折舊費用')) {
+                    m.depreciationP1 = item.val1;
+                    m.depreciationP2 = item.val2;
+                }
+                // CapEx (Capital Expenditures)
+                if (name.includes('取得不動產、廠房及設備') || name.includes('購置不動產')) {
+                    m.capexP1 = Math.abs(item.val1);
+                    m.capexP2 = Math.abs(item.val2);
+                }
+                // Net Cash Increase
+                if (name.includes('本期現金及約當現金淨增加') || name.includes('現金及約當現金淨增加')) {
+                    m.netCashIncreaseP1 = item.val1;
+                    m.netCashIncreaseP2 = item.val2;
+                }
+            });
+
+            // Calculate FCF (Free Cash Flow = Operating Cash Flow - CapEx)
+            m.fcfP1 = m.opCashP1 - m.capexP1;
+            m.fcfP2 = m.opCashP2 - m.capexP2;
+
+            appState.metrics = m;
+        }
+
+        // Render UI Dashboard
+        function renderUI() {
+            // Render Meta Header
+            document.getElementById('companyName').innerText = appState.companyName || '未載入公司';
+            document.getElementById('reportPeriod').innerText = appState.reportPeriod || '無期間標記';
+            document.getElementById('parsedItemCount').innerText = `${appState.items.length} 項`;
+            document.getElementById('comparisonPeriods').innerText = `${appState.period1Name.substring(0,6)} vs ${appState.period2Name.substring(0,6)}`;
+
+            // Render KPI Cards
+            const m = appState.metrics;
+            document.getElementById('kpiOpCash').innerText = formatMoney(m.opCashP1);
+            renderBadge('kpiOpCashBadge', m.opCashP1, m.opCashP2);
+
+            document.getElementById('kpiFcf').innerText = formatMoney(m.fcfP1);
+            renderBadge('kpiFcfBadge', m.fcfP1, m.fcfP2);
+
+            document.getElementById('kpiNetIncome').innerText = formatMoney(m.netIncomeP1);
+            renderBadge('kpiNetIncomeBadge', m.netIncomeP1, m.netIncomeP2);
+
+            document.getElementById('kpiNetCashIncrease').innerText = formatMoney(m.netCashIncreaseP1);
+            renderBadge('kpiNetCashBadge', m.netCashIncreaseP1, m.netCashIncreaseP2);
+
+            // Table Headers
+            document.getElementById('thPeriod1').innerText = appState.period1Name;
+            document.getElementById('thPeriod2').innerText = appState.period2Name;
+
+            // Render Table
+            renderTable();
+
+            // Render Charts
+            updateCharts();
+        }
+
+        // Badge Rendering Helper
+        function renderBadge(elementId, p1, p2) {
+            const el = document.getElementById(elementId);
+            if (!p2 || p2 === 0) {
+                el.innerText = '前期無基準';
+                el.className = 'px-1.5 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600';
+                return;
+            }
+            const pct = ((p1 - p2) / Math.abs(p2)) * 100;
+            const formatted = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+            if (pct > 0) {
+                el.innerText = formatted;
+                el.className = 'px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700';
+            } else if (pct < 0) {
+                el.innerText = formatted;
+                el.className = 'px-1.5 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-700';
+            } else {
+                el.innerText = '0.0%';
+                el.className = 'px-1.5 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600';
+            }
+        }
+
+        // Render Data Table
+        function renderTable() {
+            const tbody = document.getElementById('dataTableBody');
+            if (appState.filteredItems.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>
+                            查無符合條件的會計項目
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = appState.filteredItems.map((item, index) => {
+                const isHeader = item.name.endsWith('：') || item.name.includes('活動之現金流量') || (!item.val1 && !item.val2);
+                const bgClass = isHeader ? 'bg-slate-50/70 font-bold text-slate-900' : 'hover:bg-slate-50/50';
+                
+                const diffPctText = item.val2 !== 0 
+                    ? (item.diffPct >= 0 ? '+' : '') + item.diffPct.toFixed(1) + '%' 
+                    : '--';
+                const diffPctColor = item.diffPct > 0 ? 'text-emerald-600' : (item.diffPct < 0 ? 'text-rose-600' : 'text-slate-500');
+
+                return `
+                    <tr class="${bgClass} transition">
+                        <td class="py-2.5 px-6 text-slate-400 font-mono">${index + 1}</td>
+                        <td class="py-2.5 px-6 font-medium">${escapeHtml(item.name)}</td>
+                        <td class="py-2.5 px-6 text-right font-mono ${item.val1 < 0 ? 'text-rose-600' : 'text-slate-800'}">${item.val1 ? item.val1.toLocaleString() : '-'}</td>
+                        <td class="py-2.5 px-6 text-right font-mono ${item.val2 < 0 ? 'text-rose-600' : 'text-slate-500'}">${item.val2 ? item.val2.toLocaleString() : '-'}</td>
+                        <td class="py-2.5 px-6 text-right font-mono ${item.diff < 0 ? 'text-rose-600' : 'text-slate-700'}">${item.diff ? item.diff.toLocaleString() : '-'}</td>
+                        <td class="py-2.5 px-6 text-right font-mono font-semibold ${diffPctColor}">${diffPctText}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Filter Table Search
+        function filterTable(keyword) {
+            const kw = keyword.trim().toLowerCase();
+            if (!kw) {
+                appState.filteredItems = [...appState.items];
+            } else {
+                appState.filteredItems = appState.items.filter(item => item.name.toLowerCase().includes(kw));
+            }
+            renderTable();
+        }
+
+        // HTML Escape Security Helper
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // Render Charts with Chart.js
+        function updateCharts() {
+            const m = appState.metrics;
+            const c1Type = document.getElementById('chart1Type').value;
+            const c2Type = document.getElementById('chart2Type').value;
+
+            // Chart 1: Cash Flow Categories
+            const ctx1 = document.getElementById('cashFlowCategoryChart').getContext('2d');
+            if (categoryChart) categoryChart.destroy();
+
+            categoryChart = new Chart(ctx1, {
+                type: c1Type,
+                data: {
+                    labels: ['營業現金流', '投資現金流', '籌資現金流', '自由現金流(FCF)'],
+                    datasets: [
+                        {
+                            label: appState.period1Name || '本期',
+                            data: [m.opCashP1, m.invCashP1, m.finCashP1, m.fcfP1],
+                            backgroundColor: 'rgba(2, 132, 199, 0.85)',
+                            borderColor: '#0284c7',
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        },
+                        {
+                            label: appState.period2Name || '前期',
+                            data: [m.opCashP2, m.invCashP2, m.finCashP2, m.fcfP2],
+                            backgroundColor: 'rgba(148, 163, 184, 0.6)',
+                            borderColor: '#94a3b8',
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${formatMoney(ctx.raw)} (${ctx.raw.toLocaleString()})`
+                            }
+                        }
+                    },
+                    scales: c1Type === 'bar' || c1Type === 'line' ? {
+                        y: {
+                            ticks: {
+                                callback: (val) => formatMoney(val)
+                            }
+                        }
+                    } : {}
+                }
+            });
+
+            // Chart 2: Key Operating Adjustments Breakdown
+            const ctx2 = document.getElementById('adjustmentsChart').getContext('2d');
+            if (adjustmentsChart) adjustmentsChart.destroy();
+
+            const adjLabels = ['稅前淨利', '折舊費用', '資本支出(CapEx)'];
+            const adjDataP1 = [m.netIncomeP1, m.depreciationP1, m.capexP1];
+
+            adjustmentsChart = new Chart(ctx2, {
+                type: c2Type,
+                data: {
+                    labels: adjLabels,
+                    datasets: [{
+                        label: '本期金額',
+                        data: adjDataP1,
+                        backgroundColor: [
+                            'rgba(99, 102, 241, 0.85)',
+                            'rgba(14, 165, 233, 0.85)',
+                            'rgba(244, 63, 94, 0.85)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: c2Type === 'bar' ? 'y' : 'x',
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.label}: ${formatMoney(ctx.raw)} (${ctx.raw.toLocaleString()})`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

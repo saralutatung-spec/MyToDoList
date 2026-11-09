@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企業資料去識別化與營業秘密防護工具</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for parsing and exporting Excel/CSV -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .data-table th {
+            position: sticky;
+            top: 0;
+            background-color: #f8fafc;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-slate-800">
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 text-white px-6 py-3.5 flex items-center justify-between shrink-0 shadow-md">
+        <div class="flex items-center space-x-3">
+            <div class="bg-emerald-500 text-slate-900 p-2 rounded-xl font-bold shadow-lg shadow-emerald-500/20">
+                <i class="fa-solid fa-user-shield text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base leading-tight flex items-center">
+                    企業敏感資料去識別化工具
+                    <span class="ml-2.5 text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-medium">100% 本地端安全處理</span>
+                </h1>
+                <p class="text-xs text-slate-400">支援 Excel 多工作表 / CSV，自動辨識個資與財務金額，提供泛化、遮罩與假名化機制</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button onclick="downloadSampleData()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium rounded-lg transition flex items-center">
+                <i class="fa-solid fa-file-excel mr-1.5 text-emerald-400"></i> 下載測試範例檔
+            </button>
+            <label class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-md transition cursor-pointer flex items-center">
+                <i class="fa-solid fa-upload mr-1.5"></i> 選擇/拖曳 檔案
+                <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUpload(event)">
+            </label>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Dropzone Overlay / Initial State -->
+        <div id="dropzoneContainer" class="flex-1 flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 m-6 rounded-2xl bg-white hover:border-emerald-500 transition-all cursor-pointer relative" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault(); this.classList.add('border-emerald-500','bg-emerald-50/20')" ondragleave="this.classList.remove('border-emerald-500','bg-emerald-50/20')" ondrop="handleFileDrop(event)">
+            <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-4 text-2xl">
+                <i class="fa-solid fa-file-arrow-up"></i>
+            </div>
+            <h3 class="text-base font-semibold text-slate-700 mb-1">拖曳 Excel 或 CSV 檔案至此處</h3>
+            <p class="text-xs text-slate-400 mb-4 text-center max-w-md">支援多工作表 (.xlsx, .xls, .csv)。點擊即可上傳，檔案將留在您的瀏覽器本地進行運算，不會上傳任何伺服器。</p>
+            <button class="px-4 py-2 bg-slate-900 text-white text-xs font-medium rounded-xl shadow">選擇本地檔案</button>
+        </div>
+
+        <!-- Processing Interface (Hidden until file is loaded) -->
+        <div id="appContainer" class="flex-1 flex overflow-hidden hidden">
+
+            <!-- Sidebar: Sheet Navigation & Auto Detect Config -->
+            <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0">
+                <!-- File Info Header -->
+                <div class="p-4 border-b border-slate-200 bg-slate-50">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-file-excel text-emerald-600 text-lg"></i>
+                        <span id="fileNameDisplay" class="font-semibold text-xs text-slate-800 truncate">data.xlsx</span>
+                    </div>
+                </div>
+
+                <!-- Sheet Selector -->
+                <div class="p-4 border-b border-slate-200">
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">選擇工作表 (Sheets)</label>
+                    <div id="sheetList" class="space-y-1 max-h-40 overflow-y-auto">
+                        <!-- Dynamic sheet tabs -->
+                    </div>
+                </div>
+
+                <!-- Column Anonymization Rules Sidebar -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">欄位脫敏規則設定</label>
+                        <button onclick="autoDetectRules()" class="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> 自動辨識
+                        </button>
+                    </div>
+
+                    <div id="columnRulesContainer" class="space-y-3">
+                        <!-- Dynamic Column Rule Inputs -->
+                    </div>
+                </div>
+
+                <!-- Apply Actions -->
+                <div class="p-4 border-t border-slate-200 bg-slate-50 space-y-2">
+                    <button onclick="applyDeidentification()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center">
+                        <i class="fa-solid fa-play mr-2"></i> 執行去識別化處理
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Workspace: Data Preview & Comparative View -->
+            <main class="flex-1 flex flex-col overflow-hidden bg-slate-100">
+                <!-- Top Control Bar -->
+                <div class="bg-white px-6 py-3 border-b border-slate-200 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <span id="activeSheetTitle" class="font-bold text-slate-800 text-sm">工作表：Sheet1</span>
+                        <span id="rowsCountBadge" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">0 筆資料</span>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+                            <button id="viewRawBtn" onclick="switchView('raw')" class="px-3 py-1 rounded-md font-medium text-slate-600 bg-white shadow-sm">原始資料</button>
+                            <button id="viewProcessedBtn" onclick="switchView('processed')" class="px-3 py-1 rounded-md font-medium text-slate-500">脫敏後資料</button>
+                        </div>
+
+                        <!-- Export Options -->
+                        <button onclick="exportDeidentifiedData()" class="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg shadow-sm transition flex items-center">
+                            <i class="fa-solid fa-download mr-1.5 text-emerald-400"></i> 匯出匿名檔案
+                        </button>
+                        <button onclick="exportMappingTable()" class="px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg shadow-sm transition flex items-center">
+                            <i class="fa-solid fa-key mr-1.5 text-amber-500"></i> 匯出對照/解密表
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data Table Preview Container -->
+                <div class="flex-1 overflow-auto p-4">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden max-h-full">
+                        <div id="tableScrollContainer" class="overflow-auto max-h-[calc(100vh-170px)]">
+                            <table class="w-full text-left text-xs border-collapse data-table">
+                                <thead id="tableHeader" class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                                    <!-- Dynamic table headers -->
+                                </thead>
+                                <tbody id="tableBody" class="divide-y divide-slate-100 font-mono text-slate-700">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2.5 bg-slate-900 text-white text-xs rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center space-x-2">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg">系統提示訊息</span>
+    </div>
+
+    <!-- Application Engine Logic -->
+    <script>
+        // Global State
+        let rawWorkbook = null;
+        let sheetsData = {}; // { sheetName: [ {col1: val, col2: val}, ... ] }
+        let processedSheetsData = {}; 
+        let currentSheetName = "";
+        let columnRules = {}; // { colName: { method: 'pseudonym'|'mask'|'generalize'|'scale'|'noise'|'erase', params: {} } }
+        let currentViewMode = 'raw'; // 'raw' | 'processed'
+        let globalMappingTable = []; // Mapping records for pseudonymization & reversible security
+
+        // Standard Regular Expressions for Automatic Detection
+        const PATTERNS = {
+            idCard: /^[A-Z][12]\d{8}$/i,
+            email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            phone: /^09\d{8}$|^0\d{1,2}-?\d{6,8}$/,
+            creditCard: /^\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}$/,
+            moneyCol: /(薪資|金額|收入|營收|利潤|單價|總價|成本|獎金|財務|金額|price|salary|revenue|cost|amount)/i,
+            nameCol: /(姓名|人名|聯絡人|客戶|員工|name|contact)/i,
+            idCol: /(身分證|證號|id|tax|統編)/i,
+            phoneCol: /(電話|手機|傳真|phone|mobile|tel)/i,
+            emailCol: /(信箱|郵件|email|mail)/i,
+            addressCol: /(地址|住址|縣市|address)/i
+        };
+
+        // File Drag & Drop Handlers
+        function handleFileDrop(e) {
+            e.preventDefault();
+            document.getElementById('dropzoneContainer').classList.remove('border-emerald-500','bg-emerald-50/20');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) processFile(files[0]);
+        }
+
+        function handleFileUpload(e) {
+            const files = e.target.files;
+            if (files.length > 0) processFile(files[0]);
+        }
+
+        // Parse File via SheetJS
+        function processFile(file) {
+            document.getElementById('fileNameDisplay').innerText = file.name;
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                rawWorkbook = XLSX.read(data, { type: 'array' });
+
+                sheetsData = {};
+                processedSheetsData = {};
+
+                rawWorkbook.SheetNames.forEach(name => {
+                    const sheet = rawWorkbook.Sheets[name];
+                    const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                    sheetsData[name] = json;
+                });
+
+                if (rawWorkbook.SheetNames.length > 0) {
+                    currentSheetName = rawWorkbook.SheetNames[0];
+                    setupSheetUI();
+                    autoDetectRules();
+                    applyDeidentification();
+                    
+                    document.getElementById('dropzoneContainer').classList.add('hidden');
+                    document.getElementById('appContainer').classList.remove('hidden');
+                    showToast(`成功讀取檔案！共 ${rawWorkbook.SheetNames.length} 個工作表`);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Setup Sheet Selection Tabs
+        function setupSheetUI() {
+            const listContainer = document.getElementById('sheetList');
+            listContainer.innerHTML = rawWorkbook.SheetNames.map(name => `
+                <button onclick="switchSheet('${name}')" class="w-full text-left px-3 py-1.5 text-xs rounded-lg flex items-center justify-between font-medium transition ${name === currentSheetName ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'text-slate-600 hover:bg-slate-100'}">
+                    <span class="truncate">${name}</span>
+                    <span class="text-[10px] bg-slate-200/60 text-slate-500 px-1.5 py-0.5 rounded-full">${(sheetsData[name] || []).length} 筆</span>
+                </button>
+            `).join('');
+
+            document.getElementById('activeSheetTitle').innerText = `工作表：${currentSheetName}`;
+            document.getElementById('rowsCountBadge').innerText = `${(sheetsData[currentSheetName] || []).length} 筆資料`;
+        }
+
+        function switchSheet(name) {
+            currentSheetName = name;
+            setupSheetUI();
+            autoDetectRules();
+            applyDeidentification();
+        }
+
+        // Automatically detect column types and set initial rules
+        function autoDetectRules() {
+            columnRules = {};
+            const data = sheetsData[currentSheetName] || [];
+            if (data.length === 0) return;
+
+            const cols = Object.keys(data[0]);
+
+            cols.forEach(col => {
+                const sampleValues = data.slice(0, 10).map(row => String(row[col] || '').trim());
+                let method = 'none';
+                let params = {};
+
+                // Check Column Name & Patterns
+                if (PATTERNS.nameCol.test(col)) {
+                    method = 'pseudonym';
+                    params = { prefix: '對象_' };
+                } else if (PATTERNS.idCol.test(col) || sampleValues.some(v => PATTERNS.idCard.test(v))) {
+                    method = 'mask';
+                    params = { start: 3, end: 3, maskChar: '*' };
+                } else if (PATTERNS.phoneCol.test(col) || sampleValues.some(v => PATTERNS.phone.test(v))) {
+                    method = 'mask';
+                    params = { start: 4, end: 2, maskChar: '*' };
+                } else if (PATTERNS.emailCol.test(col) || sampleValues.some(v => PATTERNS.email.test(v))) {
+                    method = 'mask';
+                    params = { start: 2, end: 4, maskChar: '*' };
+                } else if (PATTERNS.moneyCol.test(col)) {
+                    // Default to numerical scaling or noise for financial secrets
+                    method = 'scale';
+                    params = { factor: 1.25 }; // Scale by 1.25x to obscure exact revenue while preserving ratio
+                } else if (sampleValues.every(v => v !== "" && !isNaN(Number(v)))) {
+                    // Pure numbers - offer noise
+                    method = 'noise';
+                    params = { percent: 5 }; // ±5% noise
+                }
+
+                columnRules[col] = { method, params };
+            });
+
+            renderColumnRulesConfig();
+        }
+
+        // Render Sidebar Rule Controls
+        function renderColumnRulesConfig() {
+            const container = document.getElementById('columnRulesContainer');
+            const cols = Object.keys(columnRules);
+
+            container.innerHTML = cols.map(col => {
+                const rule = columnRules[col];
+                return `
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="font-semibold text-slate-800 truncate max-w-[140px]" title="${col}">${col}</span>
+                            <span class="text-[10px] text-slate-400">欄位設定</span>
+                        </div>
+
+                        <!-- Method Select -->
+                        <select onchange="updateRuleMethod('${col}', this.value)" class="w-full text-xs p-1.5 bg-white border border-slate-200 rounded-lg font-medium focus:ring-1 focus:ring-emerald-500 outline-none">
+                            <option value="none" ${rule.method === 'none' ? 'selected' : ''}>保持原樣 (不處理)</option>
+                            <option value="pseudonym" ${rule.method === 'pseudonym' ? 'selected' : ''}>假名化 (維持關聯)</option>
+                            <option value="mask" ${rule.method === 'mask' ? 'selected' : ''}>部份遮罩 (Masking)</option>
+                            <option value="generalize" ${rule.method === 'generalize' ? 'selected' : ''}>數值泛化 (Binning/區間)</option>
+                            <option value="scale" ${rule.method === 'scale' ? 'selected' : ''}>等比例縮放 (Scale Factor)</option>
+                            <option value="noise" ${rule.method === 'noise' ? 'selected' : ''}>數值微擾 (Noise/雜訊)</option>
+                            <option value="erase" ${rule.method === 'erase' ? 'selected' : ''}>完全抹除 (Erase)</option>
+                        </select>
+
+                        <!-- Dynamic Extra Params Options -->
+                        <div id="rule-params-${col}" class="pt-1">
+                            ${getParamsHTML(col, rule)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getParamsHTML(col, rule) {
+            if (rule.method === 'pseudonym') {
+                return `
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] text-slate-500">前綴:</span>
+                        <input type="text" value="${rule.params.prefix || '代號_'}" onchange="updateRuleParam('${col}', 'prefix', this.value)" class="w-full text-xs px-2 py-1 bg-white border rounded">
+                    </div>`;
+            } else if (rule.method === 'mask') {
+                return `
+                    <div class="grid grid-cols-2 gap-1 text-[10px] text-slate-500">
+                        <div>前保留字數: <input type="number" value="${rule.params.start ?? 3}" min="0" onchange="updateRuleParam('${col}', 'start', parseInt(this.value))" class="w-full text-xs p-1 bg-white border rounded"></div>
+                        <div>後保留字數: <input type="number" value="${rule.params.end ?? 3}" min="0" onchange="updateRuleParam('${col}', 'end', parseInt(this.value))" class="w-full text-xs p-1 bg-white border rounded"></div>
+                    </div>`;
+            } else if (rule.method === 'generalize') {
+                return `
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] text-slate-500">區間大小:</span>
+                        <input type="number" value="${rule.params.step || 10000}" min="1" onchange="updateRuleParam('${col}', 'step', parseFloat(this.value))" class="w-full text-xs px-2 py-1 bg-white border rounded" placeholder="如 10000">
+                    </div>`;
+            } else if (rule.method === 'scale') {
+                return `
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] text-slate-500">縮放倍率:</span>
+                        <input type="number" step="0.1" value="${rule.params.factor || 1.5}" onchange="updateRuleParam('${col}', 'factor', parseFloat(this.value))" class="w-full text-xs px-2 py-1 bg-white border rounded" placeholder="例如 1.25">
+                    </div>`;
+            } else if (rule.method === 'noise') {
+                return `
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] text-slate-500">微擾範圍(±%):</span>
+                        <input type="number" value="${rule.params.percent || 5}" min="1" max="50" onchange="updateRuleParam('${col}', 'percent', parseFloat(this.value))" class="w-full text-xs px-2 py-1 bg-white border rounded">
+                    </div>`;
+            }
+            return '';
+        }
+
+        function updateRuleMethod(col, method) {
+            columnRules[col].method = method;
+            // Default params
+            if (method === 'pseudonym') columnRules[col].params = { prefix: '代號_' };
+            if (method === 'mask') columnRules[col].params = { start: 3, end: 3, maskChar: '*' };
+            if (method === 'generalize') columnRules[col].params = { step: 10000 };
+            if (method === 'scale') columnRules[col].params = { factor: 1.25 };
+            if (method === 'noise') columnRules[col].params = { percent: 5 };
+
+            renderColumnRulesConfig();
+            applyDeidentification();
+        }
+
+        function updateRuleParam(col, paramKey, val) {
+            columnRules[col].params[paramKey] = val;
+            applyDeidentification();
+        }
+
+        // Core Engine: De-identification Algorithms
+        function applyDeidentification() {
+            const data = sheetsData[currentSheetName] || [];
+            globalMappingTable = []; // reset or aggregate mapping
+
+            // Store mapping dictionaries for current session consistency
+            const pseudoMap = new Map();
+
+            processedSheetsData[currentSheetName] = data.map((row, rowIdx) => {
+                const newRow = {};
+
+                Object.keys(row).forEach(col => {
+                    const originalVal = row[col];
+                    const rule = columnRules[col] || { method: 'none' };
+                    let anonymizedVal = originalVal;
+
+                    if (originalVal !== "" && originalVal !== null && originalVal !== undefined) {
+                        switch (rule.method) {
+                            case 'pseudonym': {
+                                const strVal = String(originalVal).trim();
+                                if (!pseudoMap.has(strVal)) {
+                                    const hash = Math.random().toString(36).substring(2, 7).toUpperCase();
+                                    const pseudoName = `${rule.params.prefix || 'ID_'}${hash}`;
+                                    pseudoMap.set(strVal, pseudoName);
+                                    globalMappingTable.push({
+                                        sheet: currentSheetName,
+                                        column: col,
+                                        original: strVal,
+                                        pseudonym: pseudoName
+                                    });
+                                }
+                                anonymizedVal = pseudoMap.get(strVal);
+                                break;
+                            }
+                            case 'mask': {
+                                const strVal = String(originalVal);
+                                const start = rule.params.start ?? 3;
+                                const end = rule.params.end ?? 3;
+                                const char = rule.params.maskChar || '*';
+
+                                if (strVal.length <= start + end) {
+                                    anonymizedVal = char.repeat(strVal.length);
+                                } else {
+                                    const prefix = strVal.slice(0, start);
+                                    const suffix = strVal.slice(strVal.length - end);
+                                    const maskedArea = char.repeat(strVal.length - start - end);
+                                    anonymizedVal = `${prefix}${maskedArea}${suffix}`;
+                                }
+                                break;
+                            }
+                            case 'generalize': {
+                                const num = Number(originalVal);
+                                if (!isNaN(num)) {
+                                    const step = rule.params.step || 10000;
+                                    const lower = Math.floor(num / step) * step;
+                                    const upper = lower + step;
+                                    anonymizedVal = `${lower.toLocaleString()} - ${upper.toLocaleString()}`;
+                                }
+                                break;
+                            }
+                            case 'scale': {
+                                const num = Number(originalVal);
+                                if (!isNaN(num)) {
+                                    const factor = rule.params.factor || 1.25;
+                                    anonymizedVal = Math.round(num * factor);
+                                }
+                                break;
+                            }
+                            case 'noise': {
+                                const num = Number(originalVal);
+                                if (!isNaN(num)) {
+                                    const pct = (rule.params.percent || 5) / 100;
+                                    const randomDelta = (Math.random() * 2 - 1) * pct; // -pct to +pct
+                                    anonymizedVal = Math.round(num * (1 + randomDelta));
+                                }
+                                break;
+                            }
+                            case 'erase': {
+                                anonymizedVal = "[已抹除]";
+                                break;
+                            }
+                            case 'none':
+                            default:
+                                anonymizedVal = originalVal;
+                        }
+                    }
+
+                    newRow[col] = anonymizedVal;
+                });
+
+                return newRow;
+            });
+
+            renderTable();
+        }
+
+        // Render Data Table View
+        function renderTable() {
+            const data = (currentViewMode === 'raw') 
+                ? (sheetsData[currentSheetName] || [])
+                : (processedSheetsData[currentSheetName] || []);
+
+            const headerContainer = document.getElementById('tableHeader');
+            const bodyContainer = document.getElementById('tableBody');
+
+            if (data.length === 0) {
+                headerContainer.innerHTML = '<tr><th class="p-4">無資料</th></tr>';
+                bodyContainer.innerHTML = '';
+                return;
+            }
+
+            const cols = Object.keys(data[0]);
+
+            // Header
+            headerContainer.innerHTML = `
+                <tr>
+                    <th class="p-3 border-b border-slate-200 text-center w-12 text-slate-400">#</th>
+                    ${cols.map(c => {
+                        const rule = columnRules[c] || { method: 'none' };
+                        const isTransformed = rule.method !== 'none' && currentViewMode === 'processed';
+                        return `
+                            <th class="p-3 border-b border-slate-200">
+                                <div class="flex items-center justify-between">
+                                    <span class="${isTransformed ? 'text-emerald-700 font-bold' : ''}">${c}</span>
+                                    ${isTransformed ? `<span class="text-[9px] px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded font-normal">${rule.method}</span>` : ''}
+                                </div>
+                            </th>
+                        `;
+                    }).join('')}
+                </tr>
+            `;
+
+            // Rows
+            bodyContainer.innerHTML = data.slice(0, 100).map((row, idx) => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3 border-b border-slate-100 text-center text-slate-400 text-[11px] font-mono">${idx + 1}</td>
+                    ${cols.map(c => `
+                        <td class="p-3 border-b border-slate-100">${row[c] !== undefined ? row[c] : ''}</td>
+                    `).join('')}
+                </tr>
+            `).join('');
+        }
+
+        // Switch View Modes
+        function switchView(mode) {
+            currentViewMode = mode;
+            const rawBtn = document.getElementById('viewRawBtn');
+            const procBtn = document.getElementById('viewProcessedBtn');
+
+            if (mode === 'raw') {
+                rawBtn.className = "px-3 py-1 rounded-md font-medium text-slate-700 bg-white shadow-sm";
+                procBtn.className = "px-3 py-1 rounded-md font-medium text-slate-500 hover:text-slate-800";
+            } else {
+                procBtn.className = "px-3 py-1 rounded-md font-medium text-emerald-700 bg-white shadow-sm";
+                rawBtn.className = "px-3 py-1 rounded-md font-medium text-slate-500 hover:text-slate-800";
+            }
+            renderTable();
+        }
+
+        // Export De-identified Excel File
+        function exportDeidentifiedData() {
+            if (!rawWorkbook) return;
+
+            const newWb = XLSX.utils.book_new();
+
+            rawWorkbook.SheetNames.forEach(sheetName => {
+                const sheetData = processedSheetsData[sheetName] || sheetsData[sheetName];
+                const ws = XLSX.utils.json_to_sheet(sheetData);
+                XLSX.utils.book_append_sheet(newWb, ws, sheetName);
+            });
+
+            const fileName = `去識別化資料_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(newWb, fileName);
+            showToast('已成功下載去識別化 Excel 檔案！');
+        }
+
+        // Export Pseudonym Mapping Table
+        function exportMappingTable() {
+            if (globalMappingTable.length === 0) {
+                alert('目前沒有產生假名化 (Pseudonymization) 對照紀錄！');
+                return;
+            }
+
+            const ws = XLSX.utils.json_to_sheet(globalMappingTable);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "對照解密表");
+
+            const fileName = `假名對照解密表_保密存檔_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showToast('已成功下載機密對照表！');
+        }
+
+        // Download Sample Mock Data for Testing
+        function downloadSampleData() {
+            const sampleData = [
+                { "工號": "EMP001", "姓名": "張偉哲", "身分證字號": "A123456789", "電話": "0912345678", "信箱": "chang@company.com", "部門": "研發部", "本月薪資": 75000, "營業專案營收": 1200000 },
+                { "工號": "EMP002", "姓名": "陳怡君", "身分證字號": "B223456789", "電話": "0923456789", "信箱": "chen@company.com", "部門": "行銷部", "本月薪資": 58000, "營業專案營收": 850000 },
+                { "工號": "EMP003", "姓名": "林志豪", "身分證字號": "C187654321", "電話": "0934567890", "信箱": "lin@company.com", "部門": "業務部", "本月薪資": 62000, "營業專案營收": 2300000 },
+                { "工號": "EMP004", "姓名": "黃雅婷", "身分證字號": "D298765432", "電話": "0945678901", "信箱": "huang@company.com", "部門": "財務部", "本月薪資": 82000, "營業專案營收": 500000 }
+            ];
+
+            const ws = XLSX.utils.json_to_sheet(sampleData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "員工與財務機密範例");
+
+            XLSX.writeFile(wb, "企業測試範例資料.xlsx");
+            showToast("已下載測試範例檔！");
+        }
+
+        // Toast Helper
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

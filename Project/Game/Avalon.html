@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阿瓦隆：反抗與背叛 - 遊戲輔助工具</title>
+    <!-- 引入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        king: {
+                            50: '#fffbe1',
+                            400: '#facc15',
+                            600: '#ca8a04',
+                            900: '#713f12',
+                        },
+                        good: {
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        },
+                        evil: {
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            900: '#7f1d1d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome 圖示庫 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 自訂滾動條 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Toast 彈入彈出過渡動畫 */
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateY(-12px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        @keyframes toastOut {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-12px) scale(0.95);
+            }
+        }
+        .animate-toast-in {
+            animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-toast-out {
+            animation: toastOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-amber-500/30 selection:text-amber-200 relative">
+
+    <!-- 動態 Toast 通知容器 (固定於右頂部) -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full px-4 sm:px-0 pointer-events-none"></div>
+
+    <!-- 頂部頁首 (Header) -->
+    <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/20 ring-1 ring-amber-300/30">
+                    <i class="fa-solid fa-shield-halved text-slate-950 text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-amber-100">
+                        阿瓦隆：反抗與背叛
+                    </h1>
+                    <p class="text-xs text-slate-400">The Resistance: Avalon Assistant</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700/50 text-slate-300">
+                <i class="fa-solid fa-users text-amber-400"></i>
+                <span>支援人數: <strong class="text-white">5 - 10 人</strong></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 (Main Container) -->
+    <main class="max-w-5xl mx-auto w-full px-4 py-8 flex-1 space-y-8">
+        
+        <!-- 步驟 1: 設定與配置區域 (Grid Layout) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- 左欄：玩家名單輸入 (5 cols) -->
+            <section class="lg:col-span-5 bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <label for="player-names" class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-[#users] text-amber-400"></i>
+                            1. 輸入玩家名單
+                        </label>
+                        <span id="player-count-badge" class="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-slate-700">
+                            0 人
+                        </span>
+                    </div>
+                    <textarea 
+                        id="player-names" 
+                        rows="6" 
+                        placeholder="請輸入玩家名字&#10;支援「每行一位」或「逗號分隔」&#10;範例：&#10;亞瑟&#10;蘭斯洛特, 高文&#10;加拉哈德"
+                        class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition resize-none"
+                    >亞瑟
+蘭斯洛特
+高文
+加拉哈德
+桂妮薇兒</textarea>
+                    <p class="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info"></i>
+                        自動計算玩家總數，系統將據此自動調整正斜陣營比例。
+                    </p>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs text-slate-400">
+                    <span>正邪人數配比參考:</span>
+                    <span id="ratio-indicator" class="font-bold text-amber-400">5人 (好人3 : 壞人2)</span>
+                </div>
+            </section>
+
+            <!-- 右欄：角色配置勾選 (7 cols) -->
+            <section class="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2 mb-4">
+                        <i class="fa-solid fa-chess-knight text-amber-400"></i>
+                        2. 選擇特殊角色
+                    </h2>
+
+                    <!-- 藍方 (正義陣營) 特殊角色 -->
+                    <div class="mb-5">
+                        <div class="text-xs font-bold text-blue-400 tracking-wider uppercase mb-2.5 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                            正義陣營 (Blue Team)
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <!-- 梅林 (預設必選) -->
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-950/50 border border-blue-900/40 cursor-not-allowed opacity-90">
+                                <input type="checkbox" checked disabled class="w-4 h-4 rounded text-blue-600 bg-slate-900 border-slate-700">
+                                <div>
+                                    <div class="text-sm font-bold text-blue-300">梅林 (Merlin)</div>
+                                    <div class="text-[11px] text-slate-400">知曉所有壞人(除莫德雷德)</div>
+                                </div>
+                            </label>
+
+                            <!-- 派西維爾 -->
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-blue-500/50 cursor-pointer transition group">
+                                <input type="checkbox" id="role-percival" checked class="w-4 h-4 rounded text-blue-600 bg-slate-900 border-slate-700 focus:ring-blue-500">
+                                <div>
+                                    <div class="text-sm font-bold text-slate-200 group-hover:text-blue-300 transition">派西維爾 (Percival)</div>
+                                    <div class="text-[11px] text-slate-400">看見梅林與莫甘娜(無法區分)</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 紅方 (邪惡陣營) 特殊角色 -->
+                    <div>
+                        <div class="text-xs font-bold text-red-400 tracking-wider uppercase mb-2.5 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                            邪惡陣營 (Red Team)
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <!-- 刺客 (預設必選) -->
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-950/50 border border-red-900/40 cursor-not-allowed opacity-90">
+                                <input type="checkbox" checked disabled class="w-4 h-4 rounded text-red-600 bg-slate-900 border-slate-700">
+                                <div>
+                                    <div class="text-sm font-bold text-red-300">刺客 (Assassin)</div>
+                                    <div class="text-[11px] text-slate-400">遊戲結束可刺殺梅林逆轉</div>
+                                </div>
+                            </label>
+
+                            <!-- 莫甘娜 -->
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-red-500/50 cursor-pointer transition group">
+                                <input type="checkbox" id="role-morgana" checked class="w-4 h-4 rounded text-red-600 bg-slate-900 border-slate-700 focus:ring-red-500">
+                                <div>
+                                    <div class="text-sm font-bold text-slate-200 group-hover:text-red-300 transition">莫甘娜 (Morgana)</div>
+                                    <div class="text-[11px] text-slate-400">假冒梅林迷惑派西維爾</div>
+                                </div>
+                            </label>
+
+                            <!-- 莫德雷德 -->
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-red-500/50 cursor-pointer transition group">
+                                <input type="checkbox" id="role-mordred" class="w-4 h-4 rounded text-red-600 bg-slate-900 border-slate-700 focus:ring-red-500">
+                                <div>
+                                    <div class="text-sm font-bold text-slate-200 group-hover:text-red-300 transition">莫德雷德 (Mordred)</div>
+                                    <div class="text-[11px] text-slate-400">梅林無法看見的邪惡首領</div>
+                                </div>
+                            </label>
+
+                            <!-- 奧伯倫 -->
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-red-500/50 cursor-pointer transition group">
+                                <input type="checkbox" id="role-oberon" class="w-4 h-4 rounded text-red-600 bg-slate-900 border-slate-700 focus:ring-red-500">
+                                <div>
+                                    <div class="text-sm font-bold text-slate-200 group-hover:text-red-300 transition">奧伯倫 (Oberon)</div>
+                                    <div class="text-[11px] text-slate-400">不與其他壞人互相認親</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 錯誤訊息提示區 -->
+                <div id="error-message" class="hidden mt-4 p-3 rounded-xl bg-red-950/80 border border-red-800 text-red-200 text-xs flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-red-400 shrink-0 text-sm"></i>
+                    <span id="error-text">玩家人數必須為 5 到 10 人。</span>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- 按鈕區：觸發角色分配 -->
+        <div class="flex justify-center pt-2">
+            <button 
+                id="btn-generate"
+                onclick="generateAssignments()"
+                class="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-extrabold text-base rounded-2xl shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-3 group">
+                <i class="fa-solid fa-wand-magic-sparkles text-lg group-hover:rotate-12 transition-transform"></i>
+                <span>產生角色分配與洗牌</span>
+            </button>
+        </div>
+
+        <!-- 步驟 3: 新增互動紀錄與局勢備忘區 (Custom Log/Notes Section) -->
+        <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-3">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-list text-amber-400"></i>
+                        3. 遊戲局勢紀錄與筆記
+                    </h2>
+                    <p class="text-xs text-slate-400">可在這裡記錄發言疑點、隊伍組合或任務投票結果。</p>
+                </div>
+                <button 
+                    id="btn-clear-logs" 
+                    class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-trash-can text-red-400"></i> 清空全部紀錄
+                </button>
+            </div>
+
+            <!-- 輸入區塊與驗證提示 -->
+            <div class="space-y-1.5">
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-1">
+                        <input 
+                            type="text" 
+                            id="log-input" 
+                            placeholder="例如：第一局出任務 (亞瑟, 蘭斯洛特) - 1張失敗牌..." 
+                            class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition"
+                        >
+                    </div>
+                    <button 
+                        id="btn-add-log"
+                        class="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition shadow-md shadow-amber-500/10 flex items-center justify-center gap-2 shrink-0">
+                        <i class="fa-solid fa-plus"></i>
+                        新增紀錄
+                    </button>
+                </div>
+                <!-- 欄位驗證警告文字 (預設隱藏) -->
+                <p id="log-input-error" class="hidden text-xs text-red-400 flex items-center gap-1.5 pt-1 font-medium transition-all">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>請輸入筆記內容再進行新增！</span>
+                </p>
+            </div>
+
+            <!-- 動態渲染顯示區域 -->
+            <div id="log-list-container" class="space-y-2 pt-2">
+                <!-- 空白狀態提示 -->
+                <div id="log-empty-tip" class="text-center py-6 text-slate-500 text-xs border border-dashed border-slate-800 rounded-xl">
+                    <i class="fa-solid fa-note-sticky text-slate-600 text-xl mb-1 block"></i>
+                    尚無筆記紀錄，請在上方輸入框新增...
+                </div>
+            </div>
+        </section>
+
+        <!-- 步驟 4: 結果顯示區 (Result Container) -->
+        <section id="result-section" class="hidden space-y-6 pt-4">
+            
+            <!-- 視圖切換標籤 & 標題 -->
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
+                <div>
+                    <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-square-poll-vertical"></i>
+                        分配結果已生成
+                    </h2>
+                    <p class="text-xs text-slate-400">可使用防窺模式逐一讓玩家查看，或開啟主持總覽視圖。</p>
+                </div>
+                
+                <!-- 切換 View 模式 -->
+                <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                    <button id="view-btn-privacy" onclick="switchView('privacy')" class="px-4 py-2 rounded-lg font-bold transition bg-amber-500 text-slate-950 shadow-md">
+                        <i class="fa-solid fa-eye-slash mr-1.5"></i>個人防窺模式
+                    </button>
+                    <button id="view-btn-master" onclick="switchView('master')" class="px-4 py-2 rounded-lg font-bold text-slate-400 hover:text-slate-200 transition">
+                        <i class="fa-solid fa-crown mr-1.5"></i>主持人總覽
+                    </button>
+                </div>
+            </div>
+
+            <!-- 模式 A: 個人防窺翻牌模式 (Privacy Card View) -->
+            <div id="view-privacy" class="space-y-6">
+                <div class="bg-amber-950/30 border border-amber-800/50 rounded-2xl p-4 text-center">
+                    <p class="text-xs text-amber-300 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-user-shield text-sm"></i>
+                        請玩家依次接過手機，點擊自己的名字查看身份，看畢後請點擊「隱藏身份」再移交下一位。
+                    </p>
+                </div>
+
+                <!-- 玩家卡片網格 -->
+                <div id="privacy-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- 卡片動態生成 -->
+                </div>
+            </div>
+
+            <!-- 模式 B: 主持人總覽模式 (Master View) -->
+            <div id="view-master" class="hidden space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="master-cards-grid">
+                    <!-- 總覽動態生成 -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- 頁尾 (Footer) -->
+    <footer class="border-t border-slate-800/60 bg-slate-950/80 py-6 text-center text-xs text-slate-500">
+        <p>阿瓦隆桌遊輔助小幫手 &copy; 2026 Avalon Companion. Designed with Tailwind CSS.</p>
+    </footer>
+
+    <!-- 遊戲邏輯與互動 JavaScript -->
+    <script>
+        // 1. 標準阿瓦隆人數配比資料 (5 - 10 人)
+        const AVALON_RATIOS = {
+            5: { good: 3, evil: 2 },
+            6: { good: 4, evil: 2 },
+            7: { good: 4, evil: 3 },
+            8: { good: 5, evil: 3 },
+            9: { good: 6, evil: 3 },
+            10: { good: 7, evil: 4 }
+        };
+
+        // LocalStorage Key 常數
+        const STORAGE_KEY = 'avalon_game_state_v1';
+
+        // 全域狀態變數
+        let currentAssignments = [];
+        let activeView = 'privacy';
+        let gameLogs = [];
+
+        // -----------------------------------------------------------------------------
+        // UI 回饋與 Toast 通知元件 (Toast Notification System)
+        // -----------------------------------------------------------------------------
+        function showToast(message, type = 'success', duration = 2000) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm font-semibold animate-toast-in ${
+                type === 'success' 
+                    ? 'bg-emerald-600 border-emerald-500/50 text-white shadow-emerald-950/40' 
+                    : type === 'warning'
+                    ? 'bg-amber-600 border-amber-500/50 text-white shadow-amber-950/40'
+                    : 'bg-red-600 border-red-500/50 text-white shadow-red-950/40'
+            }`;
+
+            const iconClass = type === 'success' 
+                ? 'fa-circle-check' 
+                : type === 'warning' 
+                ? 'fa-triangle-exclamation' 
+                : 'fa-circle-xmark';
+
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass} text-base shrink-0"></i>
+                <span class="flex-1">${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+
+            // 自動定時淡出銷毀
+            setTimeout(() => {
+                toast.classList.remove('animate-toast-in');
+                toast.classList.add('animate-toast-out');
+                toast.addEventListener('animationend', () => {
+                    toast.remove();
+                });
+            }, duration);
+        }
+
+        // 讀取並解析玩家輸入名單
+        function getPlayerList() {
+            const rawText = document.getElementById('player-names').value;
+            if (!rawText.trim()) return [];
+            
+            return rawText
+                .split(/[\n,，]+/)
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
+        }
+
+        // 頁面加載後初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 先讀取 LocalStorage 資料
+            loadFromLocalStorage();
+
+            const nameInput = document.getElementById('player-names');
+            nameInput.addEventListener('input', () => {
+                updatePlayerCountDisplay();
+                saveToLocalStorage();
+            });
+
+            // 監聽所有 checkbox 的變更並同步 saveToLocalStorage
+            const checkboxes = ['role-percival', 'role-morgana', 'role-mordred', 'role-oberon'];
+            checkboxes.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('change', saveToLocalStorage);
+                }
+            });
+
+            updatePlayerCountDisplay();
+
+            // 輸入框即時輸入時消除驗證錯誤狀態
+            const logInput = document.getElementById('log-input');
+            logInput.addEventListener('input', clearLogInputError);
+
+            // 新增筆記按鈕與 Enter 鍵觸發
+            document.getElementById('btn-add-log').addEventListener('click', addGameLog);
+            logInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addGameLog();
+            });
+
+            // 清空所有筆記
+            document.getElementById('btn-clear-logs').addEventListener('click', clearAllLogs);
+        });
+
+        // 清除筆記輸入框驗證錯誤狀態
+        function clearLogInputError() {
+            const input = document.getElementById('log-input');
+            const errorMsg = document.getElementById('log-input-error');
+            
+            input.classList.remove('border-red-500', 'focus:ring-red-500/50', 'focus:border-red-500');
+            input.classList.add('border-slate-800', 'focus:ring-amber-500/50', 'focus:border-amber-500');
+            errorMsg.classList.add('hidden');
+        }
+
+        // 顯示筆記輸入框驗證錯誤狀態
+        function showLogInputError() {
+            const input = document.getElementById('log-input');
+            const errorMsg = document.getElementById('log-input-error');
+            
+            input.classList.remove('border-slate-800', 'focus:ring-amber-500/50', 'focus:border-amber-500');
+            input.classList.add('border-red-500', 'focus:ring-red-500/50', 'focus:border-red-500');
+            errorMsg.classList.remove('hidden');
+            input.focus();
+        }
+
+        // -----------------------------------------------------------------------------
+        // LocalStorage 資料持久化 (Data Persistence)
+        // -----------------------------------------------------------------------------
+
+        // 儲存狀態至 LocalStorage
+        function saveToLocalStorage() {
+            try {
+                const state = {
+                    playerNamesText: document.getElementById('player-names').value,
+                    roles: {
+                        percival: document.getElementById('role-percival').checked,
+                        morgana: document.getElementById('role-morgana').checked,
+                        mordred: document.getElementById('role-mordred').checked,
+                        oberon: document.getElementById('role-oberon').checked
+                    },
+                    currentAssignments: currentAssignments,
+                    activeView: activeView,
+                    gameLogs: gameLogs
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (err) {
+                console.error('儲存至 LocalStorage 失敗:', err);
+            }
+        }
+
+        // 從 LocalStorage 載入資料
+        function loadFromLocalStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+
+                const state = JSON.parse(raw);
+                if (!state) return;
+
+                // 恢復玩家輸入文字
+                if (state.playerNamesText !== undefined) {
+                    document.getElementById('player-names').value = state.playerNamesText;
+                }
+
+                // 恢復角色勾選
+                if (state.roles) {
+                    if (state.roles.percival !== undefined) document.getElementById('role-percival').checked = state.roles.percival;
+                    if (state.roles.morgana !== undefined) document.getElementById('role-morgana').checked = state.roles.morgana;
+                    if (state.roles.mordred !== undefined) document.getElementById('role-mordred').checked = state.roles.mordred;
+                    if (state.roles.oberon !== undefined) document.getElementById('role-oberon').checked = state.roles.oberon;
+                }
+
+                // 恢復筆記清單
+                if (Array.isArray(state.gameLogs)) {
+                    gameLogs = state.gameLogs;
+                    renderLogs();
+                }
+
+                // 恢復角色分配結果
+                if (Array.isArray(state.currentAssignments) && state.currentAssignments.length > 0) {
+                    currentAssignments = state.currentAssignments;
+                    renderResults();
+                    document.getElementById('result-section').classList.remove('hidden');
+                    if (state.activeView) {
+                        switchView(state.activeView);
+                    }
+                }
+            } catch (err) {
+                console.error('從 LocalStorage 解析資料失敗，將還原為預設狀態:', err);
+            }
+        }
+
+        // 更新人數顯示與配比提示
+        function updatePlayerCountDisplay() {
+            const players = getPlayerList();
+            const count = players.length;
+            const badge = document.getElementById('player-count-badge');
+            const ratioText = document.getElementById('ratio-indicator');
+            const errorBox = document.getElementById('error-message');
+
+            badge.textContent = `${count} 人`;
+
+            if (AVALON_RATIOS[count]) {
+                const r = AVALON_RATIOS[count];
+                ratioText.textContent = `${count}人 (好人${r.good} : 壞人${r.evil})`;
+                badge.className = "text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                errorBox.classList.add('hidden');
+            } else {
+                ratioText.textContent = "未在 5-10 人標準規範內";
+                badge.className = "text-xs font-semibold px-2 py-0.5 rounded-md bg-red-950 text-red-400 border border-red-800";
+            }
+        }
+
+        // 洗牌陣列 (Fisher-Yates)
+        function shuffle(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // 產生角色分配
+        function generateAssignments() {
+            const players = getPlayerList();
+            const count = players.length;
+            const errorBox = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+
+            if (count < 5 || count > 10) {
+                errorText.textContent = `目前的玩家人數為 ${count} 人，請調整為 5 至 10 人。`;
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            const ratio = AVALON_RATIOS[count];
+            
+            // 讀取選擇的角色
+            const usePercival = document.getElementById('role-percival').checked;
+            const useMorgana = document.getElementById('role-morgana').checked;
+            const useMordred = document.getElementById('role-mordred').checked;
+            const useOberon = document.getElementById('role-oberon').checked;
+
+            // 構建正義陣營 (好人)
+            const goodRoles = ['Merlin'];
+            if (usePercival) goodRoles.push('Percival');
+            while (goodRoles.length < ratio.good) {
+                goodRoles.push('Loyal Servant');
+            }
+
+            // 構建邪惡陣營 (壞人)
+            const evilRoles = ['Assassin'];
+            if (useMorgana) evilRoles.push('Morgana');
+            if (useMordred) evilRoles.push('Mordred');
+            if (useOberon) evilRoles.push('Oberon');
+            while (evilRoles.length < ratio.evil) {
+                evilRoles.push('Minion of Mordred');
+            }
+
+            // 檢查特殊角色是否超過陣營限制
+            if (goodRoles.length > ratio.good) {
+                errorText.textContent = `正義陣營特殊角色過多！${count} 人局最多只能有 ${ratio.good} 名好人。`;
+                errorBox.classList.remove('hidden');
+                return;
+            }
+            if (evilRoles.length > ratio.evil) {
+                errorText.textContent = `邪惡陣營特殊角色過多！${count} 人局最多只能有 ${ratio.evil} 名壞人。`;
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            errorBox.classList.add('hidden');
+
+            // 隨機洗牌玩家與角色
+            const shuffledPlayers = shuffle(players);
+            const allRoles = shuffle([...goodRoles, ...evilRoles]);
+
+            // 組成分配陣列
+            const rawAssignments = shuffledPlayers.map((player, index) => {
+                const roleKey = allRoles[index];
+                const isEvil = ['Assassin', 'Morgana', 'Mordred', 'Oberon', 'Minion of Mordred'].includes(roleKey);
+                return {
+                    name: player,
+                    roleKey: roleKey,
+                    isEvil: isEvil
+                };
+            });
+
+            // 計算天眼認親資訊
+            const merlinSeen = rawAssignments.filter(a => a.isEvil && a.roleKey !== 'Mordred').map(a => a.name);
+            const percivalSeen = shuffle(rawAssignments.filter(a => a.roleKey === 'Merlin' || a.roleKey === 'Morgana').map(a => a.name));
+            const evilTeamSeen = rawAssignments.filter(a => a.isEvil && a.roleKey !== 'Oberon').map(a => a.name);
+
+            currentAssignments = rawAssignments.map(item => {
+                let info = '';
+                let roleName = '';
+                let roleDesc = '';
+
+                switch (item.roleKey) {
+                    case 'Merlin':
+                        roleName = '梅林 (Merlin)';
+                        roleDesc = '正義陣營領袖';
+                        info = `【視野】你看到的壞人為：<strong class="text-red-400">${merlinSeen.join(', ') || '無'}</strong> (不含莫德雷德)`;
+                        break;
+                    case 'Percival':
+                        roleName = '派西維爾 (Percival)';
+                        roleDesc = '騎士護衛';
+                        info = `【視野】你看到的梅林/莫甘娜候選人為：<strong class="text-blue-300">${percivalSeen.join(', ') || '無'}</strong> (無法分清真假)`;
+                        break;
+                    case 'Loyal Servant':
+                        roleName = '亞瑟的忠臣 (Loyal Servant)';
+                        roleDesc = '正義陣營平民';
+                        info = '【視野】你沒有任何特殊視野，請透過發言與投票找出夥伴！';
+                        break;
+                    case 'Assassin':
+                        roleName = '刺客 (Assassin)';
+                        roleDesc = '邪惡陣營執行者';
+                        info = `【同伴】你的邪惡陣營同伴為：<strong class="text-red-400">${evilTeamSeen.join(', ')}</strong> (不含奧伯倫)`;
+                        break;
+                    case 'Morgana':
+                        roleName = '莫甘娜 (Morgana)';
+                        roleDesc = '邪惡女巫';
+                        info = `【同伴】你的邪惡陣營同伴為：<strong class="text-red-400">${evilTeamSeen.join(', ')}</strong> (不含奧伯倫)。你在派西維爾眼中會假冒成梅林。`;
+                        break;
+                    case 'Mordred':
+                        roleName = '莫德雷德 (Mordred)';
+                        roleDesc = '邪惡陣營首領';
+                        info = `【同伴】你的邪惡陣營同伴為：<strong class="text-red-400">${evilTeamSeen.join(', ')}</strong> (不含奧伯倫)。梅林無法看見你的身份！`;
+                        break;
+                    case 'Oberon':
+                        roleName = '奧伯倫 (Oberon)';
+                        roleDesc = '孤高邪惡者';
+                        info = '【視野】你看不到其他壞人，別的壞人也看不到你！';
+                        break;
+                    case 'Minion of Mordred':
+                        roleName = '莫德雷德爪牙 (Minion)';
+                        roleDesc = '邪惡陣營平民';
+                        info = `【同伴】你的邪惡陣營同伴為：<strong class="text-red-400">${evilTeamSeen.join(', ')}</strong> (不含奧伯倫)`;
+                        break;
+                }
+
+                return {
+                    ...item,
+                    roleName,
+                    roleDesc,
+                    info
+                };
+            });
+
+            renderResults();
+            document.getElementById('result-section').classList.remove('hidden');
+            document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+            
+            // 同步保存分配結果並跳出 Toast
+            saveToLocalStorage();
+            showToast('角色洗牌與分配成功！');
+        }
+
+        // 切換防窺/主持人視圖
+        function switchView(mode) {
+            activeView = mode;
+            const btnPrivacy = document.getElementById('view-btn-privacy');
+            const btnMaster = document.getElementById('view-btn-master');
+            const viewPrivacy = document.getElementById('view-privacy');
+            const viewMaster = document.getElementById('view-master');
+
+            if (mode === 'privacy') {
+                btnPrivacy.className = 'px-4 py-2 rounded-lg font-bold transition bg-amber-500 text-slate-950 shadow-md';
+                btnMaster.className = 'px-4 py-2 rounded-lg font-bold text-slate-400 hover:text-slate-200 transition';
+                viewPrivacy.classList.remove('hidden');
+                viewMaster.classList.add('hidden');
+            } else {
+                btnMaster.className = 'px-4 py-2 rounded-lg font-bold transition bg-amber-500 text-slate-950 shadow-md';
+                btnPrivacy.className = 'px-4 py-2 rounded-lg font-bold text-slate-400 hover:text-slate-200 transition';
+                viewMaster.classList.remove('hidden');
+                viewPrivacy.classList.add('hidden');
+            }
+
+            saveToLocalStorage();
+        }
+
+        // 渲染結果畫面
+        function renderResults() {
+            // A. 防窺模式卡片渲染
+            const privacyGrid = document.getElementById('privacy-cards-grid');
+            privacyGrid.innerHTML = currentAssignments.map((a, idx) => `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-sm font-extrabold text-amber-400 flex items-center gap-2">
+                            <i class="fa-solid fa-user"></i> ${a.name}
+                        </span>
+                        <span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                            玩家 #${idx + 1}
+                        </span>
+                    </div>
+
+                    <div id="role-content-${idx}" class="hidden space-y-3 my-2 p-4 rounded-xl bg-slate-950/90 border ${a.isEvil ? 'border-red-900/60' : 'border-blue-900/60'}">
+                        <div>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded ${a.isEvil ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-blue-950 text-blue-400 border border-blue-800'}">
+                                ${a.isEvil ? '邪惡陣營' : '正義陣營'}
+                            </span>
+                            <h3 class="text-base font-black ${a.isEvil ? 'text-red-300' : 'text-blue-300'} mt-1">
+                                ${a.roleName}
+                            </h3>
+                            <p class="text-xs text-slate-400">${a.roleDesc}</p>
+                        </div>
+                        <div class="text-xs text-slate-300 border-t border-slate-800 pt-2 leading-relaxed">
+                            ${a.info}
+                        </div>
+                    </div>
+
+                    <button 
+                        id="btn-reveal-${idx}"
+                        onclick="togglePrivacyCard(${idx})"
+                        class="w-full mt-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition border border-slate-700 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-eye text-amber-400"></i>
+                        <span>點擊查看身份</span>
+                    </button>
+                </div>
+            `).join('');
+
+            // B. 主持人總覽渲染
+            const masterGrid = document.getElementById('master-cards-grid');
+            masterGrid.innerHTML = currentAssignments.map(a => `
+                <div class="bg-slate-900 border ${a.isEvil ? 'border-red-900/50 bg-red-950/10' : 'border-blue-900/50 bg-blue-950/10'} rounded-2xl p-4 flex justify-between items-center">
+                    <div>
+                        <div class="text-sm font-bold text-slate-200">${a.name}</div>
+                        <div class="text-xs ${a.isEvil ? 'text-red-400' : 'text-blue-400'} font-bold mt-0.5">${a.roleName}</div>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 rounded-full ${a.isEvil ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-blue-950 text-blue-300 border border-blue-800'}">
+                        ${a.isEvil ? '壞人' : '好人'}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // 翻開/隱藏個人卡片
+        function togglePrivacyCard(idx) {
+            const content = document.getElementById(`role-content-${idx}`);
+            const btn = document.getElementById(`btn-reveal-${idx}`);
+
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                btn.innerHTML = `<i class="fa-solid fa-eye-slash text-slate-400"></i> <span>隱藏身份</span>`;
+                btn.className = "w-full mt-3 py-2.5 bg-slate-950 text-slate-400 font-bold rounded-xl text-xs transition border border-slate-800 flex items-center justify-center gap-2";
+            } else {
+                content.classList.add('hidden');
+                btn.innerHTML = `<i class="fa-solid fa-eye text-amber-400"></i> <span>點擊查看身份</span>`;
+                btn.className = "w-full mt-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition border border-slate-700 flex items-center justify-center gap-2";
+            }
+        }
+
+        // 新增動態筆記/備忘 (包含嚴格輸入驗證與 Toast 回饋)
+        function addGameLog() {
+            const input = document.getElementById('log-input');
+            const text = input.value.trim();
+
+            // 輸入驗證：如果空值則阻止動作並顯示警告
+            if (!text) {
+                showLogInputError();
+                return;
+            }
+
+            // 清除驗證錯誤狀態
+            clearLogInputError();
+
+            const logItem = {
+                id: 'log-' + Date.now(),
+                text: text
+            };
+
+            gameLogs.unshift(logItem);
+            renderLogs();
+            saveToLocalStorage();
+
+            // 清空輸入框並彈出成功 Toast 通知
+            input.value = '';
+            showToast('筆記紀錄已成功新增！');
+        }
+
+        // 刪除單筆紀錄
+        function deleteLog(id) {
+            gameLogs = gameLogs.filter(item => item.id !== id);
+            renderLogs();
+            saveToLocalStorage();
+            showToast('已移除該筆紀錄', 'warning');
+        }
+
+        // 清空所有筆記
+        function clearAllLogs() {
+            if (gameLogs.length === 0) return;
+            gameLogs = [];
+            renderLogs();
+            saveToLocalStorage();
+            showToast('所有筆記紀錄已清空', 'warning');
+        }
+
+        // 根據 gameLogs 陣列渲染筆記列表
+        function renderLogs() {
+            const container = document.getElementById('log-list-container');
+            container.innerHTML = '';
+
+            if (gameLogs.length === 0) {
+                container.innerHTML = `
+                    <div id="log-empty-tip" class="text-center py-6 text-slate-500 text-xs border border-dashed border-slate-800 rounded-xl">
+                        <i class="fa-solid fa-note-sticky text-slate-600 text-xl mb-1 block"></i>
+                        尚無筆記紀錄，請在上方輸入框新增...
+                    </div>
+                `;
+                return;
+            }
+
+            gameLogs.forEach(log => {
+                const item = document.createElement('div');
+                item.id = log.id;
+                item.className = 'bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex justify-between items-center gap-3 transition-all duration-200 hover:border-slate-700';
+                item.innerHTML = `
+                    <div class="flex items-center gap-2.5 text-xs text-slate-200">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+                        <span>${escapeHtml(log.text)}</span>
+                    </div>
+                    <button 
+                        onclick="deleteLog('${log.id}')"
+                        class="text-slate-500 hover:text-red-400 transition text-xs p-1"
+                        title="刪除紀錄">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // 轉義 HTML 避免 XSS
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>

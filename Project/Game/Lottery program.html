@@ -1,0 +1,454 @@
+# 溫馨童趣幼兒園名稱抽籤程式
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>溫馨童趣幼兒園名稱抽籤程式</title>
+  <style>
+    :root {
+      --primary-color: #ff94b8;
+      --secondary-color: #ffb7b2;
+      --bg-color: #fff5f5;
+      --card-bg: #ffffff;
+      --text-color: #6d5959;
+      --accent-color: #ffda79;
+      --success-color: #8ed1fc;
+    }
+
+    * {
+      box-sizing: border-box;
+
+      margin: 0;
+      padding: 0;
+      font-family: 'PingFang TC', 'Heiti TC', 'Microsoft JhengHei', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      background: var(--card-bg);
+
+      border-radius: 24px;
+      padding: 30px;
+      box-shadow: 0 8px 24px rgba(255, 148, 184, 0.15);
+      text-align: center;
+      border: 4px solid var(--secondary-color);
+    }
+
+    h1 {
+      color: #ff6b8b;
+      margin-bottom: 10px;
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    h1::before, h1::after {
+      content: '✨';
+
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: #a18888;
+      margin-bottom: 25px;
+    }
+
+    /* 抽籤主要舞台 */
+    .lottery-stage {
+      background: linear-gradient(135deg, #fff9f9 0%, #fff1f5 100%);
+      border: 3px dashed var(--primary-color);
+      border-radius: 20px;
+      padding: 40px 20px;
+      margin-bottom: 30px;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .display-box {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #ff477e;
+      margin-bottom: 10px;
+      min-height: 3.5rem;
+      line-height: 3.5rem;
+      transition: transform 0.1s ease;
+      word-break: break-all;
+    }
+
+    .display-en {
+      font-size: 1.2rem;
+      color: #8b7676;
+
+      min-height: 1.5rem;
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+
+    .display-meaning {
+      font-size: 1.1rem;
+      color: #66bb6a;
+      background: #e8f5e9;
+      padding: 6px 16px;
+      border-radius: 20px;
+      display: inline-block;
+      min-height: 1.5rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+    }
+
+    .display-meaning.show {
+
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 按鈕樣式 */
+    .btn-group {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      font-size: 1.2rem;
+
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #e06d91;
+      transition: all 0.1s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button:hover {
+      background-color: #ff7ea5;
+    }
+
+    button:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #e06d91;
+    }
+
+
+    button:disabled {
+      background-color: #e0d5d5;
+      box-shadow: 0 6px 0 #b3a7a7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #resetBtn {
+      background-color: #a8e6cf;
+      box-shadow: 0 6px 0 #81c7ad;
+    }
+    #resetBtn:hover { background-color: #bbf2de; }
+    #resetBtn:active { box-shadow: 0 2px 0 #81c7ad; }
+
+    /* 狀態區與名單呈現 */
+    .status-panel {
+      font-size: 1rem;
+      margin-bottom: 20px;
+      color: #8b7676;
+
+      background: #fdf6f6;
+      padding: 10px;
+      border-radius: 12px;
+      display: inline-block;
+    }
+
+    .list-section {
+      text-align: left;
+      margin-top: 20px;
+    }
+
+    .list-title {
+      font-size: 1.2rem;
+      color: #ff6b8b;
+      margin-bottom: 15px;
+      border-bottom: 2px solid var(--secondary-color);
+      padding-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+
+      align-items: center;
+    }
+
+    .pool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      max-height: 250px;
+      overflow-y: auto;
+      padding: 5px;
+      border: 1px solid #ffe3e3;
+      border-radius: 12px;
+      background: #fffdfd;
+    }
+
+    .pool-item {
+      background: #fff;
+      border: 1px solid #ffd1dc;
+      padding: 10px;
+
+      border-radius: 10px;
+      font-size: 0.9rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      color: var(--text-color);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .pool-item.drawn {
+      background-color: #f0eae4;
+      border-color: #dcd6d0;
+      color: #bdaeae;
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    /* 提示訊息彈窗代替 alert */
+    .message-box {
+      position: fixed;
+
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background-color: #ff7675;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+    .message-box.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* 響應式調整 */
+    @media (max-width: 600px) {
+      .container { padding: 20px 15px; }
+
+      h1 { font-size: 1.6rem; }
+      .display-box { font-size: 1.8rem; min-height: 2.8rem; line-height: 2.8rem; }
+      button { width: 100%; justify-content: center; }
+      .pool-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="msgBox" class="message-box">名單已全數抽完囉！</div>
+
+  <div class="container">
+    <h1>幼兒園名稱抽籤</h1>
+    <div class="subtitle">精選 20 組溫馨童趣的命名方案</div>
+
+    <div class="lottery-stage">
+      <div id="displayBox" class="display-box">準備好抽籤了嗎？</div>
+      <div id="displayEn" class="display-en">Click Start to Draw</div>
+      <div id="displayMeaning" class="display-meaning">寓意特色</div>
+
+    </div>
+
+    <div class="status-panel">
+      剩餘數量：<span id="remainCount">20</span> / 總數：<span id="totalCount">20</span>
+    </div>
+
+    <div class="btn-group">
+      <button id="drawBtn">🔮 開始抽籤</button>
+      <button id="resetBtn">🔄 重置籤筒</button>
+    </div>
+
+    <div class="list-section">
+      <div class="list-title">
+        <span>籤筒候選名單</span>
+      </div>
+      <div id="poolGrid" class="pool-grid"></div>
+    </div>
+  </div>
+
+
+  <script>
+    // 內建您提供的 20 組溫馨童趣幼稚園名稱資料
+    const defaultData = [
+      { id: 1, zh: "糖果屋幼兒園", en: "Candy House Kindergarten", text: "甜美溫馨、充滿歡笑" },
+      { id: 2, zh: "彩虹糖幼兒園", en: "Rainbow Drops Preschool", text: "繽紛多彩、快樂成長" },
+      { id: 3, zh: "小太陽幼兒園", en: "Little Sun Academy", text: "溫慢朝氣、照亮未來" },
+      { id: 4, zh: "泡泡糖幼兒園", en: "Bubble Gum Kindergarten", text: "夢幻童趣、快樂飛揚" },
+      { id: 5, zh: "草莓堡幼兒園", en: "Strawberry Castle Preschool", text: "甜蜜夢幻、城堡體驗" },
+      { id: 6, zh: "小松鼠幼兒園", en: "Little Squirrel Academy", text: "勤敏聰慧、熱愛探索" },
+      { id: 7, zh: "棉花糖幼兒園", en: "Marshmallow Kindergarten", text: "柔軟溫馨、關懷陪伴" },
+      { id: 8, zh: "萌萌熊幼兒園", en: "Cute Bear Academy", text: "憨厚可愛、安全守護" },
+      { id: 9, zh: "奇幻森林幼兒園", en: "Magic Forest Preschool", text: "啟發創意、擁抱自然" },
+      { id: 10, zh: "星星樹幼兒園", en: "Star Tree Academy", text: "閃耀智慧、茁壯發芽" },
+      { id: 11, zh: "嘟嘟車幼兒園", en: "Toot-Toot Train Preschool", text: "歡樂啟航、探索世界" },
+      { id: 12, zh: "小星星幼兒園", en: "Twinkle Stars Kindergarten", text: "照亮夢想、閃耀光芒" },
+      { id: 13, zh: "蜜蜂家園幼兒園", en: "Honey Bee Academy", text: "團隊合作、勤勞學習" },
+      { id: 14, zh: "布丁狗幼兒園", en: "Pudding Puppy Preschool", text: "活潑可愛、樂觀開朗" },
+      { id: 15, zh: "微笑樹幼兒園", en: "Smiling Tree Kindergarten", text: "充滿笑容、常青成長" },
+      { id: 16, zh: "小萌芽幼兒園", en: "Little Sprout Preschool", text: "茁壯成長、潛能無限" },
+
+      { id: 17, zh: "蘋果派幼兒園", en: "Apple Pie Academy", text: "豐收甜蜜、溫暖滋味" },
+      { id: 18, zh: "雲朵朵幼兒園", en: "Fluffy Clouds Kindergarten", text: "自由想像、無憂無慮" },
+      { id: 19, zh: "奇奇貓幼兒園", en: "Kiki Cat Preschool", text: "好奇心強、靈活學習" },
+      { id: 20, zh: "夢幻島幼兒園", en: "Neverland Academy", text: "永葆童心、勇敢冒險" }
+    ];
+
+    let candidates = [];
+    let drawnIds = new Set();
+    let isRolling = false;
+
+    const displayBox = document.getElementById('displayBox');
+    const displayEn = document.getElementById('displayEn');
+    const displayMeaning = document.getElementById('displayMeaning');
+    const remainCountSpan = document.getElementById('remainCount');
+    const totalCountSpan = document.getElementById('totalCount');
+    const drawBtn = document.getElementById('drawBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const poolGrid = document.getElementById('poolGrid');
+    const msgBox = document.getElementById('msgBox');
+
+
+    // 初始化程式
+    function init() {
+      candidates = [...defaultData];
+      drawnIds.clear();
+      isRolling = false;
+      
+      displayBox.textContent = "準備好抽籤了嗎？";
+      displayEn.textContent = "Click Start to Draw";
+      displayMeaning.textContent = "寓意特色";
+      displayMeaning.classList.remove('show');
+      
+      drawBtn.disabled = false;
+      
+      updateUI();
+    }
+
+    // 更新介面數字與列表狀態
+    function updateUI() {
+      const remaining = candidates.filter(c => !drawnIds.has(c.id));
+
+      remainCountSpan.textContent = remaining.length;
+      totalCountSpan.textContent = candidates.length;
+
+      // 渲染名單
+      poolGrid.innerHTML = '';
+      candidates.forEach(item => {
+        const div = document.createElement('div');
+        div.className = `pool-item ${drawnIds.has(item.id) ? 'drawn' : ''}`;
+        div.textContent = `${item.id}. ${item.zh}`;
+        poolGrid.appendChild(div);
+      });
+    }
+
+    // 顯示客製化提示訊息
+    function showToast(text) {
+      msgBox.textContent = text;
+      msgBox.classList.add('show');
+      setTimeout(() => {
+        msgBox.classList.remove('show');
+
+      }, 2500);
+    }
+
+    // 執行抽籤跑馬燈與結果呈現
+    function draw() {
+      if (isRolling) return;
+
+      const available = candidates.filter(c => !drawnIds.has(c.id));
+      
+      if (available.length === 0) {
+        showToast("名單已全數抽完囉！請點擊重置。");
+        return;
+      }
+
+      isRolling = true;
+      drawBtn.disabled = true;
+      resetBtn.disabled = true;
+      displayMeaning.classList.remove('show');
+
+
+      let duration = 1500; // 跑馬燈持續時間 (毫秒)
+      let intervalTime = 60; // 跑馬燈滾動速度
+      let startTime = Date.now();
+
+      const timer = setInterval(() => {
+        // 在所有候選（包含已抽過，增加畫面豐富度）或僅未抽過中隨機滾動
+        const randomPick = candidates[Math.floor(Math.random() * candidates.length)];
+        displayBox.textContent = randomPick.zh;
+        displayEn.textContent = randomPick.en;
+
+        // 超過時間則停止滾動並呈現真實抽籤結果
+        if (Date.now() - startTime >= duration) {
+          clearInterval(timer);
+          
+          // 真正隨機抽取一個未抽過的名額
+          const luckyResult = available[Math.floor(Math.random() * available.length)];
+          drawnIds.add(luckyResult.id);
+
+          // 呈現中獎結果
+
+          displayBox.textContent = luckyResult.zh;
+          displayEn.textContent = luckyResult.en;
+          displayMeaning.textContent = `✨ 寓意：${luckyResult.text}`;
+          displayMeaning.classList.add('show');
+
+          isRolling = false;
+          drawBtn.disabled = false;
+          resetBtn.disabled = false;
+
+          updateUI();
+
+          // 若剛好抽完最後一個，提示使用者
+          if (drawnIds.size === candidates.length) {
+            drawBtn.disabled = true;
+          }
+        }
+      }, intervalTime);
+    }
+
+
+    // 綁定按鈕事件
+    drawBtn.addEventListener('click', draw);
+    resetBtn.addEventListener('click', init);
+
+    // 啟動初始化
+    init();
+  </script>
+</body>
+</html>
+
+

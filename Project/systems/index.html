@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bonnie 怡伶 | 作品集</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome 圖標 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pink: {
+              50: '#fdf2f8',
+              100: '#fce7f3',
+              200: '#fbcfe8',
+              300: '#f9a8d4',
+              400: '#f472b6',
+              500: '#ec4899',
+              600: '#db2777',
+              700: '#be185d',
+              800: '#9d174d',
+              900: '#831843',
+              950: '#500724',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+    
+    html {
+      scroll-behavior: smooth;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    article, section {
+      scroll-margin-top: 75px;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+      background-color: #170812;
+      color: #fdf2f8;
+      background-image: radial-gradient(rgba(244, 114, 182, 0.08) 1.5px, transparent 1.5px), radial-gradient(rgba(244, 114, 182, 0.05) 1.5px, #170812 1.5px);
+      background-size: 36px 36px;
+      background-position: 0 0, 18px 18px;
+    }
+
+    .glass-nav {
+      background: rgba(23, 8, 18, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .hero-card {
+      background: linear-gradient(180deg, rgba(46, 14, 34, 0.85) 0%, rgba(29, 9, 23, 0.95) 100%);
+      border: 1px solid rgba(244, 114, 182, 0.25);
+      box-shadow: 0 10px 30px -10px rgba(236, 72, 153, 0.2);
+    }
+
+    .project-card {
+      background: rgba(33, 10, 25, 0.7);
+      border: 1px solid rgba(244, 114, 182, 0.15);
+      backdrop-filter: blur(8px);
+      transition: all 0.2s ease;
+    }
+
+    .quick-jump-btn {
+      background: rgba(49, 15, 37, 0.65);
+      border: 1px solid rgba(244, 114, 182, 0.15);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .quick-jump-btn:active, .quick-jump-btn:hover {
+      background: rgba(78, 20, 58, 0.9);
+      border-color: rgba(244, 114, 182, 0.4);
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col pb-24 selection:bg-pink-500 selection:text-white">
+
+  <!-- 頂部手機專屬導覽列 -->
+  <header class="sticky top-0 z-50 glass-nav border-b border-pink-900/50 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-2.5">
+      <!-- Bonnie 粉紅圓角 Badge -->
+      <div class="px-2 py-0.5 rounded-lg bg-pink-500/20 border border-pink-400/40 text-pink-300 text-xs font-black tracking-wider flex items-center gap-1">
+        <i class="fa-solid fa-heart text-[10px] text-pink-400"></i>
+        <span>BONNIE</span>
+      </div>
+      <div class="font-bold text-sm text-pink-50 tracking-tight">
+        怡伶 Bonnie <span class="text-pink-400/50 font-normal">|</span> 作品集
+      </div>
+    </div>
+    <div class="flex items-center space-x-1.5">
+      <button onclick="scrollToTarget('projects')" class="px-3 py-1 rounded-lg bg-pink-950/70 text-pink-200 border border-pink-800/40 hover:text-white text-xs font-medium transition cursor-pointer">
+        作品目錄
+      </button>
+      <button onclick="scrollToTarget('about')" class="px-3 py-1 rounded-lg bg-gradient-to-r from-pink-600 to-rose-600 text-white text-xs font-medium transition shadow-sm shadow-pink-900/30 cursor-pointer">
+        關於我
+      </button>
+    </div>
+  </header>
+
+  <main class="px-4 pt-4 max-w-md mx-auto w-full space-y-6">
+
+    <!-- Hero Card 核心主卡片 -->
+    <section class="hero-card rounded-2xl p-4.5 border border-pink-500/20 relative overflow-hidden">
+      <!-- 頂部粉紅膠囊標籤 -->
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-950/80 border border-pink-500/30 text-pink-300 text-[11px] font-semibold mb-3.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse"></span>
+        100% 瀏覽器本機運行・手機優先設計
+      </div>
+
+      <!-- 大標題 -->
+      <h1 class="text-2xl font-black tracking-tight bg-gradient-to-r from-pink-200 via-rose-100 to-pink-300 bg-clip-text text-transparent mb-2 leading-tight">
+        我的網頁作品集
+      </h1>
+
+      <!-- 說明文案 -->
+      <p class="text-xs text-pink-200/80 leading-relaxed mb-4">
+        嗨！我是 <span class="text-white font-bold">怡伶 (Bonnie)</span>。擅長將複雜事物條理化，跨足系統分析、IT管理、財務、人資與行政營運。以下收錄我精心打造的系統工具與休閒互動應用：
+      </p>
+
+      <!-- 作品目錄快速跳轉 Header -->
+      <div class="flex items-center justify-between pt-2 pb-2.5 border-t border-pink-900/40 text-[11px]">
+        <div class="flex items-center gap-1.5 text-pink-200 font-medium">
+          <i class="fa-regular fa-compass text-pink-400"></i>
+          <span>作品目錄快速跳轉</span>
+        </div>
+        <span class="text-pink-300/70">共 6 款作品</span>
+      </div>
+
+      <!-- 快速跳轉 2x2 網格按鈕 -->
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="scrollToTarget('card-1')" class="quick-jump-btn p-2.5 rounded-xl flex items-center gap-2.5 text-left w-full">
+          <div class="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-400/25 flex items-center justify-center text-pink-400 text-sm shrink-0">
+            <i class="fa-solid fa-cat"></i>
+          </div>
+          <div class="overflow-hidden">
+            <div class="text-xs font-bold text-pink-50 truncate">差旅申請表</div>
+            <div class="text-[10px] text-pink-300/70 truncate">可愛貓咪・行政報銷</div>
+          </div>
+        </button>
+
+        <button onclick="scrollToTarget('card-2')" class="quick-jump-btn p-2.5 rounded-xl flex items-center gap-2.5 text-left w-full">
+          <div class="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-400/25 flex items-center justify-center text-pink-400 text-sm shrink-0">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div class="overflow-hidden">
+            <div class="text-xs font-bold text-pink-50 truncate">資料去識別化</div>
+            <div class="text-[10px] text-pink-300/70 truncate">企業個資脫敏</div>
+          </div>
+        </button>
+
+        <button onclick="scrollToTarget('card-3')" class="quick-jump-btn p-2.5 rounded-xl flex items-center gap-2.5 text-left w-full">
+          <div class="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-400/25 flex items-center justify-center text-pink-400 text-sm shrink-0">
+            <i class="fa-solid fa-chart-pie"></i>
+          </div>
+          <div class="overflow-hidden">
+            <div class="text-xs font-bold text-pink-50 truncate">銷售數據儀表板</div>
+            <div class="text-[10px] text-pink-300/70 truncate">商業洞察視覺化</div>
+          </div>
+        </button>
+
+        <button onclick="scrollToTarget('card-4')" class="quick-jump-btn p-2.5 rounded-xl flex items-center gap-2.5 text-left w-full">
+          <div class="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-400/25 flex items-center justify-center text-pink-400 text-sm shrink-0">
+            <i class="fa-solid fa-building-columns"></i>
+          </div>
+          <div class="overflow-hidden">
+            <div class="text-xs font-bold text-pink-50 truncate">MOPS 財務分析</div>
+            <div class="text-[10px] text-pink-300/70 truncate">觀測站財報健檢</div>
+          </div>
+        </button>
+
+        <button onclick="scrollToTarget('card-5')" class="quick-jump-btn p-2.5 rounded-xl flex items-center gap-2.5 text-left w-full">
+          <div class="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-400/25 flex items-center justify-center text-pink-400 text-sm shrink-0">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+          <div class="overflow-hidden">
+            <div class="text-xs font-bold text-pink-50 truncate">花仙子塔羅占卜</div>
+            <div class="text-[10px] text-pink-300/70 truncate">神秘心靈牌卡</div>
+          </div>
+        </button>
+
+        <button onclick="scrollToTarget('card-6')" class="quick-jump-btn p-2.5 rounded-xl flex items-center gap-2.5 text-left w-full">
+          <div class="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-400/25 flex items-center justify-center text-pink-400 text-sm shrink-0">
+            <i class="fa-solid fa-glass-water"></i>
+          </div>
+          <div class="overflow-hidden">
+            <div class="text-xs font-bold text-pink-50 truncate">浪漫喝水小遊戲</div>
+            <div class="text-[10px] text-pink-300/70 truncate">日常健康打卡</div>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- 精選作品圖卡 Section Header -->
+    <div id="projects" class="flex items-center gap-2 pt-2">
+      <span class="text-base text-pink-400">🌸</span>
+      <h2 class="text-sm font-bold text-pink-100 tracking-wide">精選作品圖卡</h2>
+    </div>
+
+    <!-- 作品 1：可愛貓咪差旅申請表 -->
+    <article id="card-1" class="project-card rounded-2xl overflow-hidden">
+      <div class="h-28 bg-gradient-to-r from-pink-900/60 via-rose-950/70 to-pink-950/80 p-3.5 flex items-center justify-between border-b border-pink-900/40">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-pink-500/20 border border-pink-400/30 flex items-center justify-center text-pink-300 text-xl shadow-inner">
+            <i class="fa-solid fa-cat"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-pink-300 uppercase tracking-wider block">人資行政與表單</span>
+            <h3 class="text-sm font-bold text-white">可愛貓咪差旅申請與報銷系統</h3>
+          </div>
+        </div>
+      </div>
+      <div class="p-3.5 space-y-3">
+        <div>
+          <span class="text-[11px] font-semibold text-pink-300 block mb-1">作品簡介</span>
+          <p class="text-xs text-pink-100/80 leading-relaxed text-justify">
+            結合療癒貓咪視覺與嚴謹差旅報銷的互動系統。自動計算膳雜費、交通費與住宿金額，即時加總與幣別換算，支援一鍵匯出標準 Excel 明細與友善列印格式，將枯燥行政轉化為愉快填寫體驗。
+          </p>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">使用到哪些 API</span>
+          <div class="flex flex-wrap gap-1 text-pink-200">
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">SheetJS (XLSX)</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">Window.print()</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">Google Fonts</span>
+          </div>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">應用場景</span>
+          <p class="text-pink-200/90">企業出差報銷、同仁公務代墊款核銷、活動企劃差旅預算編列。</p>
+        </div>
+        <a href="file:///C:/Users/saral/OneDrive/Project/systems/Cute%20Meow%20Travel%20Request%20Form.html" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-pink-900/40">
+          <span>打開作品</span>
+          <i class="fa-solid fa-play text-[10px]"></i>
+        </a>
+      </div>
+    </article>
+
+    <!-- 作品 2：企業敏感資料去識別化工具 -->
+    <article id="card-2" class="project-card rounded-2xl overflow-hidden">
+      <div class="h-28 bg-gradient-to-r from-pink-900/60 via-purple-950/70 to-pink-950/80 p-3.5 flex items-center justify-between border-b border-pink-900/40">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-pink-500/20 border border-pink-400/30 flex items-center justify-center text-pink-300 text-xl shadow-inner">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-pink-300 uppercase tracking-wider block">資安防護與個資脫敏</span>
+            <h3 class="text-sm font-bold text-white">企業敏感資料去識別化工具</h3>
+          </div>
+        </div>
+      </div>
+      <div class="p-3.5 space-y-3">
+        <div>
+          <span class="text-[11px] font-semibold text-pink-300 block mb-1">作品簡介</span>
+          <p class="text-xs text-pink-100/80 leading-relaxed text-justify">
+            專為保護企業營運機密與客戶隱私打造的脫敏工具。具備自動欄位特徵識別、姓名手機遮罩、分組泛化與雜湊代換功能，完全在本地瀏覽器記憶體運算，確保資料絕對不外洩。
+          </p>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">使用到哪些 API</span>
+          <div class="flex flex-wrap gap-1 text-pink-200">
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">SheetJS</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">Web Crypto API (SHA-256)</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">FileReader</span>
+          </div>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">應用場景</span>
+          <p class="text-pink-200/90">跨部門數據分享、委外開發測試資料準備、AI 模型微調訓練前脫敏。</p>
+        </div>
+        <a href="file:///C:/Users/saral/OneDrive/Project/systems/Corporate%20sensitive%20data%20anonymization%20tool.html" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-pink-900/40">
+          <span>打開作品</span>
+          <i class="fa-solid fa-play text-[10px]"></i>
+        </a>
+      </div>
+    </article>
+
+    <!-- 作品 3：銷售營運數據洞察儀表板 -->
+    <article id="card-3" class="project-card rounded-2xl overflow-hidden">
+      <div class="h-28 bg-gradient-to-r from-pink-900/60 via-fuchsia-950/70 to-pink-950/80 p-3.5 flex items-center justify-between border-b border-pink-900/40">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-pink-500/20 border border-pink-400/30 flex items-center justify-center text-pink-300 text-xl shadow-inner">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-pink-300 uppercase tracking-wider block">商業智慧 BI</span>
+            <h3 class="text-sm font-bold text-white">去識別化銷售數據洞察儀表板</h3>
+          </div>
+        </div>
+      </div>
+      <div class="p-3.5 space-y-3">
+        <div>
+          <span class="text-[11px] font-semibold text-pink-300 block mb-1">作品簡介</span>
+          <p class="text-xs text-pink-100/80 leading-relaxed text-justify">
+            將繁瑣的銷售原始紀錄轉換為立體商業指標。具備動態營收加總、毛利結構剖析、客戶貢獻度鯨魚曲線與區域熱度分析，協助經營主管迅速掌握業績關鍵脈絡。
+          </p>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">使用到哪些 API</span>
+          <div class="flex flex-wrap gap-1 text-pink-200">
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">Chart.js</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">SheetJS</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">Lucide Icons</span>
+          </div>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">應用場景</span>
+          <p class="text-pink-200/90">業務團隊月會檢討、通路銷售策略擬定、重點客戶貢獻度分析。</p>
+        </div>
+        <a href="file:///C:/Users/saral/OneDrive/Project/systems/De-identified%20Sales%20Data%20Insights%20Dashboard.html" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-pink-900/40">
+          <span>打開作品</span>
+          <i class="fa-solid fa-play text-[10px]"></i>
+        </a>
+      </div>
+    </article>
+
+    <!-- 作品 4：MOPS 財務智慧分析 -->
+    <article id="card-4" class="project-card rounded-2xl overflow-hidden">
+      <div class="h-28 bg-gradient-to-r from-pink-900/60 via-rose-950/70 to-pink-950/80 p-3.5 flex items-center justify-between border-b border-pink-900/40">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-pink-500/20 border border-pink-400/30 flex items-center justify-center text-pink-300 text-xl shadow-inner">
+            <i class="fa-solid fa-building-columns"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-pink-300 uppercase tracking-wider block">財務分析與風控</span>
+            <h3 class="text-sm font-bold text-white">MOPS 財務數據智慧分析儀表板</h3>
+          </div>
+        </div>
+      </div>
+      <div class="p-3.5 space-y-3">
+        <div>
+          <span class="text-[11px] font-semibold text-pink-300 block mb-1">作品簡介</span>
+          <p class="text-xs text-pink-100/80 leading-relaxed text-justify">
+            專為公開資訊觀測站財報設計的智慧分析儀表板。自動擷取損益、資產負債與現金流，動態換算毛利率、營業利益率與償債能力比率，圖表化呈現公司財務體質變化。
+          </p>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">使用到哪些 API</span>
+          <div class="flex flex-wrap gap-1 text-pink-200">
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">Chart.js</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">SheetJS</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">DOMParser</span>
+          </div>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">應用場景</span>
+          <p class="text-pink-200/90">企業財會財務健檢、投資決策評估、供應鏈合作廠商信用評級。</p>
+        </div>
+        <a href="file:///C:/Users/saral/OneDrive/Project/systems/MOPS%20Financial%20Data%20Smart%20Analysis%20Dashboard.html" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-pink-900/40">
+          <span>打開作品</span>
+          <i class="fa-solid fa-play text-[10px]"></i>
+        </a>
+      </div>
+    </article>
+
+    <!-- 作品 5：花仙子塔羅占卜 -->
+    <article id="card-5" class="project-card rounded-2xl overflow-hidden">
+      <div class="h-28 bg-gradient-to-r from-pink-900/60 via-purple-900/70 to-pink-950/80 p-3.5 flex items-center justify-between border-b border-pink-900/40">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-pink-500/20 border border-pink-400/30 flex items-center justify-center text-pink-300 text-xl shadow-inner">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-pink-300 uppercase tracking-wider block">互動休閒與心靈</span>
+            <h3 class="text-sm font-bold text-white">花仙子塔羅占卜 (Flower Fairy Tarot)</h3>
+          </div>
+        </div>
+      </div>
+      <div class="p-3.5 space-y-3">
+        <div>
+          <span class="text-[11px] font-semibold text-pink-300 block mb-1">作品簡介</span>
+          <p class="text-xs text-pink-100/80 leading-relaxed text-justify">
+            充滿夢幻與詩意的花仙子主題塔羅牌占卜應用。精心繪製的牌面與洗牌動畫，提供直覺的單張指引與正逆位解析，在繁忙工作之餘為使用者帶來溫暖撫慰的心靈指引。
+          </p>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">使用到哪些 API</span>
+          <div class="flex flex-wrap gap-1 text-pink-200">
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">CSS 3D Transform</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">Web Animations API</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">Math.random()</span>
+          </div>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">應用場景</span>
+          <p class="text-pink-200/90">每日運勢抽卡、朋友聚會話題互動、放鬆舒壓的情緒指引工具。</p>
+        </div>
+        <a href="file:///C:/Users/saral/OneDrive/Project/Game/Flower%20Fairy%20Tarot.html" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-pink-900/40">
+          <span>打開作品</span>
+          <i class="fa-solid fa-play text-[10px]"></i>
+        </a>
+      </div>
+    </article>
+
+    <!-- 作品 6：浪漫日常喝水小遊戲 -->
+    <article id="card-6" class="project-card rounded-2xl overflow-hidden">
+      <div class="h-28 bg-gradient-to-r from-pink-900/60 via-rose-950/70 to-pink-950/80 p-3.5 flex items-center justify-between border-b border-pink-900/40">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-pink-500/20 border border-pink-400/30 flex items-center justify-center text-pink-300 text-xl shadow-inner">
+            <i class="fa-solid fa-glass-water"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-pink-300 uppercase tracking-wider block">生活習慣養成</span>
+            <h3 class="text-sm font-bold text-white">浪漫日常喝水小遊戲</h3>
+          </div>
+        </div>
+      </div>
+      <div class="p-3.5 space-y-3">
+        <div>
+          <span class="text-[11px] font-semibold text-pink-300 block mb-1">作品簡介</span>
+          <p class="text-xs text-pink-100/80 leading-relaxed text-justify">
+            將日常水分補充轉化為唯美浪漫的互動養成習慣。記錄每日飲水量並以療癒動畫反饋進度，適時提醒補水，讓健康生活在不知不覺中成為浪漫甜蜜的日常儀式。
+          </p>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">使用到哪些 API</span>
+          <div class="flex flex-wrap gap-1 text-pink-200">
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">LocalStorage API</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">Canvas / SVG 動畫</span>
+            <span class="px-2 py-0.5 bg-pink-900/60 rounded">Notifications</span>
+          </div>
+        </div>
+        <div class="bg-pink-950/50 rounded-xl p-2.5 border border-pink-900/40 text-[11px]">
+          <span class="font-semibold text-pink-400 block mb-1">應用場景</span>
+          <p class="text-pink-200/90">辦公室久坐補水提醒、健康作息養成、女性健康生活風格小品。</p>
+        </div>
+        <a href="file:///C:/Users/saral/OneDrive/Project/Game/Romantic%20Daily%20Water%20Drinking%20Mini-Game.html" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-pink-900/40">
+          <span>打開作品</span>
+          <i class="fa-solid fa-play text-[10px]"></i>
+        </a>
+      </div>
+    </article>
+
+    <!-- 關於我 Section -->
+    <section id="about" class="hero-card rounded-2xl p-4.5 border border-pink-500/20 space-y-3">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 p-0.5 shadow-md shadow-pink-900/40">
+          <div class="w-full h-full bg-pink-950 rounded-[14px] flex items-center justify-center text-pink-300 text-xl">
+            <i class="fa-solid fa-heart"></i>
+          </div>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-white">關於 怡伶 (Bonnie)</h3>
+          <p class="text-[11px] text-pink-300">系統分析・IT管理・人資財務・斜槓跨領域人才</p>
+        </div>
+      </div>
+      <p class="text-xs text-pink-100/90 leading-relaxed text-justify">
+        嗨！我是怡伶 (Bonnie)。喜歡跳舞、旅行、畫畫，擅長將複雜事物條理化。跨足系統分析、IT管理、財務、人資與行政營運，具備快速學習與靈活應變能力，致力於打造優雅好用、兼具溫度與實用性的數位工具。
+      </p>
+      <div class="pt-1">
+        <a href="file:///C:/Users/saral/OneDrive/Project/ABOUT%20ME%20WEB/my%20web.html" class="inline-flex items-center gap-1 text-xs text-pink-400 hover:text-pink-300 font-semibold underline underline-offset-4">
+          <span>造訪我的完整個人簡介網站</span>
+          <i class="fa-solid fa-arrow-right text-[10px]"></i>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="text-center text-pink-400/50 text-[11px] py-4">
+    © 2026 Bonnie 怡伶 | 作品集 • Mobile First Portfolio
+  </footer>
+
+  <script>
+    function scrollToTarget(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  </script>
+
+</body>
+</html>

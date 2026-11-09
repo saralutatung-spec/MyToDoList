@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日喝水統計與記錄</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 圖標 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #fdf4f7;
+        }
+
+        /* 浪漫高腳杯與液體波浪動畫 */
+        .glass-container {
+            clip-path: polygon(10% 0%, 90% 0%, 75% 75%, 52% 75%, 52% 92%, 80% 92%, 80% 100%, 20% 100%, 20% 92%, 48% 92%, 48% 75%, 25% 75%);
+        }
+
+        .water-wave {
+            position: absolute;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(180deg, rgba(56, 189, 248, 0.75) 0%, rgba(244, 114, 182, 0.65) 100%);
+            border-radius: 40%;
+            animation: rotate 8s linear infinite;
+            bottom: var(--wave-bottom, -150%);
+            transition: bottom 0.8s ease-in-out;
+        }
+
+        .water-wave-back {
+            position: absolute;
+            left: -60%;
+            width: 220%;
+            height: 220%;
+            background: linear-gradient(180deg, rgba(147, 197, 253, 0.5) 0%, rgba(251, 113, 133, 0.4) 100%);
+            border-radius: 35%;
+            animation: rotate 12s linear infinite;
+            bottom: var(--wave-bottom-back, -145%);
+            transition: bottom 0.8s ease-in-out;
+        }
+
+        /* 飄浮冰塊動畫 */
+        .ice-cube {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 6px;
+            box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.8), 0 2px 6px rgba(0,0,0,0.05);
+            animation: float 4s ease-in-out infinite alternate;
+            z-index: 15;
+            bottom: var(--ice-bottom, 20%);
+            transition: bottom 0.8s ease-in-out;
+        }
+
+        .ice-1 { left: 30%; transform: rotate(15deg); animation-delay: 0s; }
+        .ice-2 { left: 55%; transform: rotate(-20deg); animation-delay: 1.2s; }
+        .ice-3 { left: 42%; transform: rotate(40deg); animation-delay: 2.1s; }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-6px) rotate(8deg); }
+            100% { transform: translateY(0px) rotate(-5deg); }
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 條紋吸管 */
+        .straw {
+            position: absolute;
+            top: 5px;
+            left: 58%;
+            width: 10px;
+            height: 210px;
+            background: repeating-linear-gradient(
+                -45deg,
+                #f472b6,
+                #f472b6 8px,
+                #ffffff 8px,
+                #ffffff 16px
+            );
+            transform: rotate(18deg);
+            border-radius: 4px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+            z-index: 12;
+            pointer-events: none;
+        }
+
+        /* 滾動條美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-700 pb-12">
+    <!-- 頂部導覽 -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-rose-100 shadow-sm">
+        <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-400 to-pink-400 text-white flex items-center justify-center shadow-md shadow-pink-200">
+                    <i class="fa-solid fa-wine-glass text-lg"></i>
+                </div>
+                <h1 class="font-bold text-lg bg-gradient-to-r from-sky-600 to-pink-500 bg-clip-text text-transparent tracking-wide">Romantic Hydro</h1>
+            </div>
+            <button id="open-settings-btn" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto px-4 pt-6 space-y-6">
+
+        <!-- 日期選擇區 -->
+        <div class="flex items-center justify-between bg-white px-4 py-2.5 rounded-2xl shadow-sm border border-pink-50">
+            <button id="prev-day-btn" class="p-2 hover:bg-pink-50 rounded-xl text-pink-500 transition-colors">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div class="text-center">
+                <div id="current-date-text" class="font-semibold text-slate-800">2026年11月1日</div>
+                <div id="date-sub-text" class="text-xs text-slate-400">今天</div>
+            </div>
+            <button id="next-day-btn" class="p-2 hover:bg-pink-50 rounded-xl text-pink-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <!-- 水位與數據核心視覺卡片（高腳杯版） -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-pink-100 relative overflow-hidden flex flex-col items-center">
+            
+            <!-- 浪漫高腳杯外框容器 -->
+            <div class="relative w-52 h-64 flex flex-col items-center justify-center my-1">
+                
+                <!-- 粉紅可愛吸管 -->
+                <div class="straw"></div>
+
+                <!-- 高腳杯杯體（SVG 擬真精緻玻璃高腳杯外框） -->
+                <div class="relative w-44 h-56">
+                    
+                    <!-- 玻璃杯身視覺邊框 -->
+                    <svg class="absolute inset-0 w-full h-full z-20 pointer-events-none filter drop-shadow-sm" viewBox="0 0 100 130" fill="none">
+                        <!-- 杯口與杯身 -->
+                        <path d="M 12 5 L 88 5 C 88 5 82 75 52 82 L 52 118 L 78 118 C 80 118 82 124 80 125 L 20 125 C 18 124 20 118 22 118 L 48 118 L 48 82 C 18 75 12 5 12 5 Z" 
+                              stroke="rgba(244, 114, 182, 0.4)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        <!-- 杯光反射細節 -->
+                        <path d="M 17 12 C 17 12 21 65 30 73" stroke="rgba(255, 255, 255, 0.8)" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+
+                    <!-- 液體與冰塊遮罩區域（對齊 SVG 高腳杯形狀） -->
+                    <div class="glass-container absolute inset-0 w-full h-full bg-pink-50/20 overflow-hidden">
+                        
+                        <!-- 刻度指標 -->
+                        <div class="absolute right-6 top-4 bottom-16 py-2 flex flex-col justify-between text-[9px] text-pink-400 font-mono z-20 pointer-events-none select-none">
+                            <span>100%</span>
+                            <span>75%</span>
+                            <span>50%</span>
+                            <span>25%</span>
+                        </div>
+
+                        <!-- 飄浮冰塊 -->
+                        <div id="ice-1" class="ice-cube ice-1"></div>
+                        <div id="ice-2" class="ice-cube ice-2"></div>
+                        <div id="ice-3" class="ice-cube ice-3"></div>
+
+                        <!-- 波浪動畫 (浪漫粉水色 gradients) -->
+                        <div id="water-wave-back" class="water-wave-back"></div>
+                        <div id="water-wave" class="water-wave"></div>
+
+                        <!-- 高腳杯中央的當前數值與文字 -->
+                        <div class="absolute inset-x-0 top-10 flex flex-col items-center justify-center z-20 pointer-events-none">
+                            <span id="progress-percent" class="text-3xl font-extrabold text-slate-800 drop-shadow-md">0%</span>
+                            <span id="current-amount" class="text-xs font-semibold text-slate-600 bg-white/80 backdrop-blur-xs px-3 py-0.5 rounded-full mt-1 shadow-xs border border-pink-100">0 / 2000 ml</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 剩餘與達標資訊 -->
+            <div class="w-full mt-2 flex justify-around text-center border-t border-slate-100 pt-4">
+                <div>
+                    <div class="text-xs text-slate-400 font-medium">還需喝水</div>
+                    <div id="remaining-amount" class="text-lg font-bold text-pink-500">2000 ml</div>
+                </div>
+                <div class="w-px bg-slate-100"></div>
+                <div>
+                    <div class="text-xs text-slate-400 font-medium">目標完成度</div>
+                    <div id="status-tag" class="text-lg font-bold text-slate-700">加油中 💕</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 快捷新增按鈕區 -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-pink-100 space-y-3">
+            <h2 class="text-sm font-semibold text-slate-600 flex items-center gap-1.5">
+                <i class="fa-solid fa-heart text-pink-400"></i> 快速紀錄
+            </h2>
+            <div class="grid grid-cols-4 gap-2.5">
+                <button onclick="addWater(200)" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-pink-50/60 hover:bg-pink-100/70 text-pink-700 transition-all active:scale-95 border border-pink-100/50">
+                    <i class="fa-solid fa-glass-water text-lg mb-1 text-pink-400"></i>
+                    <span class="text-xs font-semibold">+200ml</span>
+                    <span class="text-[10px] text-pink-400">小水杯</span>
+                </button>
+                <button onclick="addWater(350)" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-pink-50/60 hover:bg-pink-100/70 text-pink-700 transition-all active:scale-95 border border-pink-100/50">
+                    <i class="fa-solid fa-mug-hot text-lg mb-1 text-pink-400"></i>
+                    <span class="text-xs font-semibold">+350ml</span>
+                    <span class="text-[10px] text-pink-400">馬克杯</span>
+                </button>
+                <button onclick="addWater(500)" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-pink-50/60 hover:bg-pink-100/70 text-pink-700 transition-all active:scale-95 border border-pink-100/50">
+                    <i class="fa-solid fa-bottle-water text-lg mb-1 text-pink-400"></i>
+                    <span class="text-xs font-semibold">+500ml</span>
+                    <span class="text-[10px] text-pink-400">寶特瓶</span>
+                </button>
+                <button onclick="addWater(700)" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-pink-50/60 hover:bg-pink-100/70 text-pink-700 transition-all active:scale-95 border border-pink-100/50">
+                    <i class="fa-solid fa-wine-glass text-lg mb-1 text-pink-400"></i>
+                    <span class="text-xs font-semibold">+700ml</span>
+                    <span class="text-[10px] text-pink-400">浪漫水壺</span>
+                </button>
+            </div>
+
+            <!-- 自訂輸入區 -->
+            <form id="custom-water-form" class="flex gap-2 pt-1">
+                <div class="relative flex-1">
+                    <input type="number" id="custom-amount-input" min="10" max="3000" placeholder="輸入自訂毫升數..." required
+                           class="w-full px-4 py-2.5 rounded-xl border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-transparent text-sm">
+                    <span class="absolute right-3 top-2.5 text-xs text-slate-400">ml</span>
+                </div>
+                <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-pink-200">
+                    加入
+                </button>
+            </form>
+        </div>
+
+        <!-- 當日喝水時間軸紀錄 -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-pink-100 space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-sm font-semibold text-slate-600 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock-rotate-left text-pink-400"></i> 當日喝水紀錄
+                </h2>
+                <span id="log-count" class="text-xs bg-slate-100 px-2 py-0.5 rounded-full text-slate-500">0 筆記錄</span>
+            </div>
+
+            <div id="history-list" class="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                <!-- 動態注入歷史紀錄 -->
+                <div class="text-center py-6 text-slate-400 text-sm">
+                    <i class="fa-regular fa-face-smile mb-1 text-2xl block text-pink-300"></i>
+                    今日尚未有喝水紀錄，點擊上方按鈕開始記錄吧！
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 設定彈窗 Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden transition-opacity">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-pink-400"></i> 個人化設定
+                </h3>
+                <button id="close-settings-btn" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">每日喝水目標 (ml)</label>
+                    <input type="number" id="target-input" min="500" max="10000" step="100" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pink-400 text-sm">
+                    <p class="text-[11px] text-slate-400 mt-1">一般成年人建議每天攝取約 2000 - 2500 ml 水分。</p>
+                </div>
+
+                <div class="p-3 bg-pink-50/70 rounded-2xl text-xs text-pink-800 space-y-1">
+                    <div class="font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-lightbulb text-pink-500"></i> 建議目標計算機
+                    </div>
+                    <div>體重 (kg) × 35 ml = 您的每日建議喝水量</div>
+                    <div class="flex gap-2 pt-2">
+                        <input type="number" id="weight-input" placeholder="輸入體重 kg" class="w-full px-2.5 py-1.5 rounded-lg border border-pink-200 text-xs bg-white">
+                        <button id="calc-weight-btn" type="button" class="px-3 py-1.5 bg-pink-500 text-white rounded-lg text-xs font-medium whitespace-nowrap">套用</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button id="save-settings-btn" class="w-full py-2.5 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-pink-200">
+                    儲存設定
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 核心邏輯 -->
+    <script>
+        // state 狀態
+        let currentDate = new Date();
+        let targetWater = 2000;
+        let logs = {}; // 格式: { 'YYYY-MM-DD': [ { id, time, amount }, ... ] }
+
+        // DOM 元素初始化
+        const currentDateText = document.getElementById('current-date-text');
+        const dateSubText = document.getElementById('date-sub-text');
+        const prevDayBtn = document.getElementById('prev-day-btn');
+        const nextDayBtn = document.getElementById('next-day-btn');
+
+        const progressPercent = document.getElementById('progress-percent');
+        const currentAmount = document.getElementById('current-amount');
+        const remainingAmount = document.getElementById('remaining-amount');
+        const statusTag = document.getElementById('status-tag');
+
+        const waterWave = document.getElementById('water-wave');
+        const waterWaveBack = document.getElementById('water-wave-back');
+
+        const historyList = document.getElementById('history-list');
+        const logCount = document.getElementById('log-count');
+
+        const customForm = document.getElementById('custom-water-form');
+        const customAmountInput = document.getElementById('custom-amount-input');
+
+        const settingsModal = document.getElementById('settings-modal');
+        const openSettingsBtn = document.getElementById('open-settings-btn');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const targetInput = document.getElementById('target-input');
+        const weightInput = document.getElementById('weight-input');
+        const calcWeightBtn = document.getElementById('calc-weight-btn');
+
+        // 初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromStorage();
+            updateUI();
+        });
+
+        // 格式化日期 key (YYYY-MM-DD)
+        function formatDateKey(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // 讀取 本地存儲
+        function loadFromStorage() {
+            try {
+                const savedTarget = localStorage.getItem('hydro_target');
+                if (savedTarget) {
+                    targetWater = parseInt(savedTarget, 10) || 2000;
+                }
+                const savedLogs = localStorage.getItem('hydro_logs');
+                if (savedLogs) {
+                    logs = JSON.parse(savedLogs) || {};
+                }
+            } catch (e) {
+                console.warn('無法從 LocalStorage 讀取資料:', e);
+                logs = {};
+            }
+        }
+
+        // 儲存至 本地存儲
+        function saveToStorage() {
+            try {
+                localStorage.setItem('hydro_target', targetWater.toString());
+                localStorage.setItem('hydro_logs', JSON.stringify(logs));
+            } catch (e) {
+                console.warn('無法儲存至 LocalStorage:', e);
+            }
+        }
+
+        // 取得目前選擇日期的總喝水量
+        function getTodayTotal() {
+            const key = formatDateKey(currentDate);
+            const todayLogs = logs[key] || [];
+            return todayLogs.reduce((sum, item) => sum + item.amount, 0);
+        }
+
+        // 更新視覺介面
+        function updateUI() {
+            // 1. 更新日期顯示
+            const today = new Date();
+            const isToday = formatDateKey(currentDate) === formatDateKey(today);
+            
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
+            currentDateText.textContent = currentDate.toLocaleDateString('zh-TW', options);
+
+            if (isToday) {
+                dateSubText.textContent = '今天';
+                nextDayBtn.disabled = true;
+            } else {
+                const diffTime = Math.abs(today - currentDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                dateSubText.textContent = `${diffDays} 天前`;
+                nextDayBtn.disabled = false;
+            }
+
+            // 2. 計算喝水數據
+            const total = getTodayTotal();
+            const percent = Math.min(Math.round((total / targetWater) * 100), 100);
+            const remaining = Math.max(targetWater - total, 0);
+
+            // 3. 更新數值
+            progressPercent.textContent = `${percent}%`;
+            currentAmount.textContent = `${total} / ${targetWater} ml`;
+            remainingAmount.textContent = `${remaining} ml`;
+
+            if (total >= targetWater) {
+                statusTag.textContent = '已達標 🎉';
+                statusTag.className = 'text-lg font-bold text-pink-500';
+            } else if (total > 0) {
+                statusTag.textContent = '加油中 💕';
+                statusTag.className = 'text-lg font-bold text-sky-500';
+            } else {
+                statusTag.textContent = '尚未開始 💧';
+                statusTag.className = 'text-lg font-bold text-slate-400';
+            }
+
+            // 4. 動態調整高腳杯水位與冰塊位置 (0% -> -155%, 100% -> -45%)
+            const waveBottomValue = -155 + (percent * 1.1);
+            const waveBottomBackValue = -150 + (percent * 1.1);
+
+            waterWave.style.setProperty('--wave-bottom', `${waveBottomValue}%`);
+            waterWaveBack.style.setProperty('--wave-bottom-back', `${waveBottomBackValue}%`);
+
+            // 冰塊跟隨水位上升 (10% ~ 65%)
+            const iceBottomValue = Math.min(Math.max(percent * 0.55, 10), 65);
+            document.querySelectorAll('.ice-cube').forEach(ice => {
+                ice.style.setProperty('--ice-bottom', `${iceBottomValue}%`);
+            });
+
+            // 5. 渲染紀錄列表
+            renderHistoryList();
+        }
+
+        // 渲染喝水歷史紀錄
+        function renderHistoryList() {
+            const key = formatDateKey(currentDate);
+            const todayLogs = logs[key] || [];
+
+            logCount.textContent = `${todayLogs.length} 筆記錄`;
+
+            if (todayLogs.length === 0) {
+                historyList.innerHTML = `
+                    <div class="text-center py-6 text-slate-400 text-sm">
+                        <i class="fa-regular fa-face-smile mb-1 text-2xl block text-pink-300"></i>
+                        今日尚未有喝水紀錄，點擊上方按鈕開始記錄吧！
+                    </div>
+                `;
+                return;
+            }
+
+            // 按時間倒序排列
+            const sortedLogs = [...todayLogs].reverse();
+
+            historyList.innerHTML = sortedLogs.map(item => `
+                <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100/80 hover:bg-pink-50/50 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-pink-100 text-pink-500 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-wine-glass"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-700">+${item.amount} ml</div>
+                            <div class="text-[10px] text-slate-400">${item.time}</div>
+                        </div>
+                    </div>
+                    <button onclick="deleteLog('${item.id}')" class="text-slate-300 hover:text-rose-500 p-1.5 transition-colors">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // 新增喝水紀錄
+        function addWater(amount) {
+            const key = formatDateKey(currentDate);
+            if (!logs[key]) {
+                logs[key] = [];
+            }
+
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            const newLog = {
+                id: Date.now().toString(),
+                time: timeStr,
+                amount: parseInt(amount, 10)
+            };
+
+            logs[key].push(newLog);
+            saveToStorage();
+            updateUI();
+        }
+
+        // 刪除紀錄
+        function deleteLog(id) {
+            const key = formatDateKey(currentDate);
+            if (logs[key]) {
+                logs[key] = logs[key].filter(item => item.id !== id);
+                saveToStorage();
+                updateUI();
+            }
+        }
+
+        // 自訂毫升表單提交
+        customForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const val = parseInt(customAmountInput.value, 10);
+            if (val && val > 0) {
+                addWater(val);
+                customAmountInput.value = '';
+            }
+        });
+
+        // 日期切換事件
+        prevDayBtn.addEventListener('click', () => {
+            currentDate.setDate(currentDate.getDate() - 1);
+            updateUI();
+        });
+
+        nextDayBtn.addEventListener('click', () => {
+            const today = new Date();
+            if (formatDateKey(currentDate) !== formatDateKey(today)) {
+                currentDate.setDate(currentDate.getDate() + 1);
+                updateUI();
+            }
+        });
+
+        // 設定彈窗開關
+        openSettingsBtn.addEventListener('click', () => {
+            targetInput.value = targetWater;
+            settingsModal.classList.remove('hidden');
+        });
+
+        closeSettingsBtn.addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+        });
+
+        // 點擊彈窗外部關閉
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.classList.add('hidden');
+            }
+        });
+
+        // 體重計算建議量
+        calcWeightBtn.addEventListener('click', () => {
+            const w = parseFloat(weightInput.value);
+            if (w && w > 0) {
+                const suggested = Math.round(w * 35);
+                targetInput.value = suggested;
+            }
+        });
+
+        // 儲存設定
+        saveSettingsBtn.addEventListener('click', () => {
+            const val = parseInt(targetInput.value, 10);
+            if (val && val >= 500) {
+                targetWater = val;
+                saveToStorage();
+                updateUI();
+                settingsModal.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
